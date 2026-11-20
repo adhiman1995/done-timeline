@@ -42,7 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.donetimeline.app.data.TaskEntity
+import com.donetimeline.app.data.Task
 import com.donetimeline.app.ui.theme.Done
 import java.time.Instant
 import java.time.LocalDate
@@ -56,7 +56,7 @@ import java.time.format.FormatStyle
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TaskEditorSheet(
-    task: TaskEntity?,
+    task: Task?,
     categories: List<String>,
     onDismiss: () -> Unit,
     onSave: (title: String, notes: String, category: String, completedAt: Long) -> Unit,

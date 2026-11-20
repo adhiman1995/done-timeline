@@ -1,4 +1,4 @@
-import { CheckIcon, SearchIcon, SunIcon, MoonIcon, PlugIcon } from './icons.jsx';
+import { CheckIcon, SearchIcon, SunIcon, MoonIcon } from './icons.jsx';
 
 const VIEWS = [
   ['timeline', 'Timeline'],
@@ -7,7 +7,7 @@ const VIEWS = [
 ];
 
 export default function Header({
-  search, onSearch, category, onCategory, categories, view, onView, theme, onToggleTheme, onOpenConnection,
+  search, onSearch, category, onCategory, categories, view, onView, theme, onToggleTheme, user, onOpenAccount,
 }) {
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -69,12 +69,14 @@ export default function Header({
           </button>
 
           <button
-            className="control icon-control"
-            onClick={onOpenConnection}
-            aria-label="Server connection"
-            title="Server connection"
+            className="control icon-control avatar-btn"
+            onClick={onOpenAccount}
+            aria-label="Account"
+            title={user?.email || 'Account'}
           >
-            <PlugIcon width={16} height={16} />
+            {user?.photoURL
+              ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" />
+              : <span>{(user?.displayName || user?.email || '?')[0].toUpperCase()}</span>}
           </button>
         </div>
       </div>

@@ -29,10 +29,6 @@ jobs:
         working-directory: client
       - run: npm run build
         working-directory: client
-        env:
-          # Set this under Settings → Secrets and variables → Actions → Variables.
-          # It's only the public server address; the access token is entered in the browser.
-          VITE_API_URL: ${{ vars.API_URL }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

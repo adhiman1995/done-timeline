@@ -1,11 +1,6 @@
 package com.donetimeline.app.ui
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -35,9 +30,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -50,7 +45,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,7 +56,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -72,7 +65,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.donetimeline.app.data.TaskEntity
+import com.donetimeline.app.data.Task
 import com.donetimeline.app.ui.theme.Done
 import com.donetimeline.app.ui.theme.categoryColors
 import java.time.Instant
@@ -101,14 +94,11 @@ fun TimelineScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbar, Modifier.padding(bottom = 72.dp)) },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
-            PullToRefreshBox(isRefreshing = state.syncing, onRefresh = { vm.syncNow() }, modifier = Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize()) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 120.dp),
                 ) {
-                    if (!state.settings.isConfigured) {
-                        item("connect") { ConnectBanner(onOpenSettings) }
-                    }
                     item("stats") { StatsGrid(state.stats) }
                     item("title") {
                         Text(
@@ -184,7 +174,7 @@ fun TimelineScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
     }
 }
 
-private data class EditorTarget(val task: TaskEntity?)
+private data class EditorTarget(val task: Task?)
 
 /* ---------------------------------------------------------------- Top bar */
 
@@ -222,8 +212,7 @@ private fun TopBar(state: UiState, vm: MainViewModel, onOpenSettings: () -> Unit
                         SyncStatus(state)
                     }
                     IconButton(onClick = { searching = true }) { Icon(Icons.Filled.Search, "Search", tint = c.text2) }
-                    SyncButton(state.syncing) { vm.syncNow() }
-                    IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.Settings, "Settings", tint = c.text2) }
+                    IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.AccountCircle, "Account", tint = c.text2) }
                 }
             }
         }
@@ -234,42 +223,16 @@ private fun TopBar(state: UiState, vm: MainViewModel, onOpenSettings: () -> Unit
 @Composable
 private fun SyncStatus(state: UiState) {
     val c = Done.colors
-    val s = state.settings
     when {
-        !s.isConfigured -> StatusLine("Offline mode · saved on this phone")
-        state.syncing -> StatusLine("Syncing…", c.accentText)
-        state.pending > 0 -> StatusLine("${state.pending} change${if (state.pending == 1) "" else "s"} waiting to sync", c.star)
-        s.lastSyncAt > 0 -> StatusLine("Synced " + relativeTime(s.lastSyncAt))
-        else -> StatusLine("Not synced yet")
-    }
-}
-
-@Composable
-private fun SyncButton(syncing: Boolean, onClick: () -> Unit) {
-    val angle = if (syncing) {
-        val t = rememberInfiniteTransition(label = "sync")
-        t.animateFloat(0f, 360f, infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Restart), label = "spin").value
-    } else 0f
-    IconButton(onClick = onClick, enabled = !syncing) {
-        Icon(Icons.Filled.Refresh, "Sync now", tint = Done.colors.text2, modifier = Modifier.rotate(angle))
+        !state.loaded -> StatusLine("Loading…")
+        state.offline && state.pendingWrites -> StatusLine("Offline · changes saved on this phone", c.star)
+        state.pendingWrites -> StatusLine("Syncing…", c.accentText)
+        state.offline -> StatusLine("Offline · showing saved tasks")
+        else -> StatusLine("Synced · up to date")
     }
 }
 
 /* ---------------------------------------------------------------- Header content */
-
-@Composable
-private fun ConnectBanner(onOpenSettings: () -> Unit) {
-    val c = Done.colors
-    DoneCard(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
-        Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Not connected", color = c.text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                Text("Tasks are saved on this phone. Connect your server to sync with the web.", color = c.text2, fontSize = 13.sp)
-            }
-            TextButton(onClick = onOpenSettings) { Text("Connect", color = c.accentText, fontWeight = FontWeight.SemiBold) }
-        }
-    }
-}
 
 @Composable
 private fun StatsGrid(stats: Stats) {
@@ -430,7 +393,7 @@ private fun DayHeader(group: DayGroup, first: Boolean) {
 }
 
 @Composable
-private fun TimelineEntry(task: TaskEntity, last: Boolean, onClick: () -> Unit, onStar: () -> Unit) {
+private fun TimelineEntry(task: Task, last: Boolean, onClick: () -> Unit, onStar: () -> Unit) {
     val c = Done.colors
     val time = remember(task.completedAt) {
         Instant.ofEpochMilli(task.completedAt).atZone(ZoneId.systemDefault()).format(timeFormat)

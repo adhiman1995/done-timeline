@@ -2,7 +2,6 @@ node_modules/
 client/dist/
 .env
 .pgdata/
-server/data/
 
 # Android
 android/.gradle/
@@ -13,3 +12,6 @@ android/.idea/
 android/.kotlin/
 *.iml
 .DS_Store
+
+# Local data export (personal data)
+tasks-export.json

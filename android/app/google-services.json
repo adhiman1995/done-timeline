@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "283206404389",
+    "project_id": "timeline-project-9286d",
+    "storage_bucket": "timeline-project-9286d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:283206404389:android:89ad698fbd467a3169b2cc",
+        "android_client_info": {
+          "package_name": "com.donetimeline.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "283206404389-al70uerq5jhvjg1th5na1oqi1ueq00bn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZaYGwXUzlq8-iyjuOWvkDxPt_jTgmEZQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "283206404389-al70uerq5jhvjg1th5na1oqi1ueq00bn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

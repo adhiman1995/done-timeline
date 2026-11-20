@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { api, AuthError, getConnection, clearConnection } from './api.js';
-import ConnectForm from './components/ConnectForm.jsx';
+import { useEffect, useMemo, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, watchTasks, createTask, updateTask, deleteTask, logOut, friendlyError } from './firebase.js';
+import SignIn from './components/SignIn.jsx';
+import AccountMenu from './components/AccountMenu.jsx';
 import Header from './components/Header.jsx';
 import Stats from './components/Stats.jsx';
 import FilterBar, { STARRED } from './components/FilterBar.jsx';
@@ -38,43 +40,31 @@ export default function App() {
   const [modal, setModal] = useState(null); // null | { task?: Task }
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState(''); // '' | category name | STARRED
-  const [connected, setConnected] = useState(() => !!getConnection().token);
-  const [authReason, setAuthReason] = useState('');
-  const [connectOpen, setConnectOpen] = useState(false);
-  const [slow, setSlow] = useState(false);
+  const [user, setUser] = useState(undefined); // undefined while Firebase restores the session
+  const [notice, setNotice] = useState('');
+  const [accountOpen, setAccountOpen] = useState(false);
 
-  const handleError = useCallback(e => {
-    if (e instanceof AuthError) {
-      setAuthReason('Your access token was rejected. Please enter it again.');
-      setConnected(false);
-    } else {
-      setError(e.message);
-    }
-  }, []);
+  useEffect(() => onAuthStateChanged(auth, u => setUser(u)), []);
 
-  const load = useCallback(async ({ quiet = false } = {}) => {
-    if (!quiet) setLoading(true);
-    const slowTimer = setTimeout(() => setSlow(true), 3000);
-    try {
-      setTasks(await api.list());
-      setError('');
-    } catch (e) {
-      handleError(e);
-    } finally {
-      clearTimeout(slowTimer);
-      setSlow(false);
-      setLoading(false);
-    }
-  }, [handleError]);
-
+  // Live subscription: changes from the Android app or another tab appear without reloading.
   useEffect(() => {
-    if (!connected) return;
-    load();
-    // Pick up changes made on other devices (e.g. the Android app) when returning to the tab.
-    const onVisible = () => document.visibilityState === 'visible' && load({ quiet: true });
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [connected, load]);
+    setTasks([]);
+    if (!user) return;
+    setLoading(true);
+    return watchTasks(
+      user.uid,
+      list => { setTasks(list); setLoading(false); },
+      e => {
+        setLoading(false);
+        if (e.code === 'permission-denied') {
+          setNotice(`${user.email} doesn't have access to this timeline. Sign in with the account it belongs to.`);
+          logOut();
+        } else {
+          setError(friendlyError(e));
+        }
+      },
+    );
+  }, [user]);
 
   const categories = useMemo(
     () => [...new Set(tasks.map(t => t.category).filter(Boolean))].sort(),
@@ -97,48 +87,27 @@ export default function App() {
     return inScope.filter(t => t.category === filter);
   }, [inScope, filter]);
 
-  async function run(fn) {
-    setError('');
-    try { await fn(); } catch (e) { handleError(e); }
+  // Firestore applies writes locally at once (and syncs later when offline), so nothing is awaited here.
+  const write = promise => { setError(''); promise.catch(e => setError(friendlyError(e))); };
+
+  function handleSave(data) {
+    write(modal?.task ? updateTask(user.uid, modal.task.id, data) : createTask(user.uid, data));
+    setModal(null);
   }
 
-  async function handleSave(data) {
-    try {
-      if (modal?.task) {
-        const updated = await api.update(modal.task.id, data);
-        setTasks(ts => ts.map(t => (t.id === updated.id ? updated : t)));
-      } else {
-        const created = await api.create(data);
-        setTasks(ts => [...ts, created]);
-      }
-      setModal(null);
-    } catch (e) {
-      if (e instanceof AuthError) { setModal(null); handleError(e); return; }
-      return e.message;
-    }
-  }
+  if (user === undefined) return <div className="bg-glow" aria-hidden="true" />;
 
-  if (!connected) {
+  if (!user) {
     return (
       <>
         <div className="bg-glow" aria-hidden="true" />
-        <ConnectForm
-          reason={authReason}
-          onConnected={() => { setAuthReason(''); setConnected(true); }}
-        />
+        <SignIn notice={notice} />
       </>
     );
   }
 
-  const handleDelete = task => run(async () => {
-    await api.remove(task.id);
-    setTasks(ts => ts.filter(t => t.id !== task.id));
-  });
-
-  const handleToggleStar = task => run(async () => {
-    const updated = await api.update(task.id, { starred: !task.starred });
-    setTasks(ts => ts.map(t => (t.id === updated.id ? updated : t)));
-  });
+  const handleDelete = task => write(deleteTask(user.uid, task.id));
+  const handleToggleStar = task => write(updateTask(user.uid, task.id, { starred: !task.starred }));
 
   let empty = null;
   if (!loading && visible.length === 0) {
@@ -170,7 +139,8 @@ export default function App() {
         onView={setView}
         theme={theme}
         onToggleTheme={toggleTheme}
-        onOpenConnection={() => setConnectOpen(true)}
+        user={user}
+        onOpenAccount={() => { setNotice(''); setAccountOpen(true); }}
       />
 
       <main className="container">
@@ -191,7 +161,6 @@ export default function App() {
 
         {loading ? (
           <div className="skeleton-list">
-            {slow && <p className="muted-note">Waking up the server… free hosting can take up to a minute.</p>}
             {[0, 1, 2].map(i => <div key={i} className="skeleton" />)}
           </div>
         ) : empty ? (
@@ -228,18 +197,7 @@ export default function App() {
         />
       )}
 
-      {connectOpen && (
-        <ConnectForm
-          onClose={() => setConnectOpen(false)}
-          onConnected={() => { setConnectOpen(false); load(); }}
-          onDisconnect={() => {
-            clearConnection();
-            setConnectOpen(false);
-            setTasks([]);
-            setConnected(false);
-          }}
-        />
-      )}
+      {accountOpen && <AccountMenu user={user} tasks={tasks} onClose={() => setAccountOpen(false)} />}
     </>
   );
 }

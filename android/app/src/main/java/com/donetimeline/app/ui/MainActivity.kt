@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.donetimeline.app.DoneApp
 import com.donetimeline.app.ui.theme.DoneTheme
 
@@ -21,20 +22,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             DoneTheme {
-                var showSettings by rememberSaveable { mutableStateOf(false) }
-                if (showSettings) {
-                    BackHandler { showSettings = false }
-                    SettingsScreen(vm, onBack = { showSettings = false })
-                } else {
-                    TimelineScreen(vm, onOpenSettings = { showSettings = true })
+                val state by vm.state.collectAsStateWithLifecycle()
+                var showAccount by rememberSaveable { mutableStateOf(false) }
+                when {
+                    state.account == null -> SignInScreen(vm)
+                    showAccount -> {
+                        BackHandler { showAccount = false }
+                        AccountScreen(vm, onBack = { showAccount = false })
+                    }
+                    else -> TimelineScreen(vm, onOpenSettings = { showAccount = true })
                 }
             }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        // Pull anything changed on the website while the app was in the background.
-        vm.syncNow(silent = true)
     }
 }
