@@ -1,0 +1,17 @@
+{
+  "name": "done-timeline-server",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --watch index.js",
+    "start": "node index.js",
+    "import-json": "node --env-file-if-exists=.env scripts/import-json.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}

@@ -1,0 +1,20 @@
+# Render Blueprint for the API. In Render: New → Blueprint → pick this repo.
+# You'll be asked for DATABASE_URL (e.g. from Neon) and ALLOWED_ORIGINS.
+services:
+  - type: web
+    name: done-timeline-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false # e.g. https://<your-github-username>.github.io
+      - key: API_TOKEN
+        generateValue: true # copy it from the Render dashboard into the web and Android apps
