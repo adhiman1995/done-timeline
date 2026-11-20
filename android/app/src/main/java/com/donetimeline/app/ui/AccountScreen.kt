@@ -86,18 +86,6 @@ fun AccountScreen(vm: MainViewModel, onBack: () -> Unit) {
                 }
             }
 
-            DoneCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionLabel("How sync works")
-                    Text(
-                        "Everything you log is saved on this phone first, so the app works offline. " +
-                            "Changes upload as soon as you're online, and edits made on the website appear here " +
-                            "within seconds while the app is open.",
-                        color = c.text2, fontSize = 13.5.sp, lineHeight = 20.sp,
-                    )
-                }
-            }
-
             OutlinedButton(
                 onClick = { vm.signOut(context); onBack() },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
