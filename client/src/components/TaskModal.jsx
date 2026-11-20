@@ -7,7 +7,7 @@ function toLocalInput(date) {
   return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;
 }
 
-export default function TaskModal({ task, categories, onSave, onClose }) {
+export default function TaskModal({ task, categories, onSave, onDelete, onClose }) {
   const [form, setForm] = useState(() => ({
     title: task?.title ?? '',
     notes: task?.notes ?? '',
@@ -16,6 +16,7 @@ export default function TaskModal({ task, categories, onSave, onClose }) {
   }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     const onKey = e => e.key === 'Escape' && onClose();
@@ -112,6 +113,15 @@ export default function TaskModal({ task, categories, onSave, onClose }) {
         {error && <div className="alert">{error}</div>}
 
         <div className="modal-foot">
+          {task && onDelete && (
+            confirmDelete ? (
+              <span className="push">
+                <button type="button" className="btn ghost danger-text" onClick={() => onDelete(task)}>Delete task</button>
+              </span>
+            ) : (
+              <button type="button" className="btn ghost danger-text push" onClick={() => setConfirmDelete(true)}>Delete</button>
+            )
+          )}
           <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn primary" disabled={saving || !form.title.trim()}>
             {saving ? 'Saving…' : task ? 'Save changes' : 'Add to timeline'}

@@ -43,10 +43,10 @@ fun SignInScreen(vm: MainViewModel) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             AppLogo(size = 64.dp)
             Spacer(Modifier.height(20.dp))
-            Text("Done Timeline", color = c.text, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text("Ticked", color = c.text, fontSize = 28.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Log what you finish and see it on a timeline. Works offline and syncs with the website.",
+                "Everything you've finished, on one timeline. Works offline and syncs with the website.",
                 color = c.text2, fontSize = 15.sp, lineHeight = 21.sp, textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(32.dp))

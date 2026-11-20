@@ -1,6 +1,16 @@
 package com.donetimeline.app.ui
 
 import androidx.compose.foundation.BorderStroke
+import com.donetimeline.app.ui.theme.Tone
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,7 +59,31 @@ fun AppLogo(size: Dp = 40.dp) {
             .background(Done.colors.logoGradient),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(size * 0.55f))
+        TickedMark(Modifier.size(size * 0.72f), Color.White)
+    }
+}
+
+/** Ring with a tick breaking out through its gap; drawn in a 64-unit box like the web icon. */
+@Composable
+fun TickedMark(modifier: Modifier = Modifier, color: Color = Color.White) {
+    Canvas(modifier) {
+        val u = size.minDimension / 64f
+        val dx = -1.2f * u
+        val dy = 1f * u
+        val stroke = Stroke(width = 5.4f * u, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val r = 15.5f * u
+        val center = Offset(32f * u + dx, 32f * u + dy)
+        // Gap between -70° and -5° (top right), in degrees clockwise from 3 o'clock.
+        drawArc(
+            color, startAngle = -5f, sweepAngle = 295f, useCenter = false,
+            topLeft = Offset(center.x - r, center.y - r), size = Size(r * 2, r * 2), style = stroke,
+        )
+        val tick = Path().apply {
+            moveTo(23.8f * u + dx, 31.6f * u + dy)
+            lineTo(30.6f * u + dx, 38.4f * u + dy)
+            lineTo(48.5f * u + dx, 18.5f * u + dy)
+        }
+        drawPath(tick, color, style = stroke)
     }
 }
 
@@ -61,7 +95,7 @@ fun DoneCard(
     content: @Composable () -> Unit,
 ) {
     val c = Done.colors
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(16.dp)
     if (onClick != null) {
         Surface(onClick = onClick, modifier = modifier, shape = shape, color = c.surface, border = BorderStroke(1.dp, c.border), content = content)
     } else {
@@ -72,22 +106,21 @@ fun DoneCard(
 @Composable
 fun CategoryChip(name: String, modifier: Modifier = Modifier, selected: Boolean = false, onClick: (() -> Unit)? = null) {
     val cc = categoryColors(name, Done.colors.isDark)
-    Row(
+    Box(
         modifier
-            .clip(RoundedCornerShape(7.dp))
-            .background(cc.bg)
-            .border(if (selected) 2.dp else 1.dp, if (selected) cc.dot else cc.border, RoundedCornerShape(7.dp))
+            .height(if (onClick != null) 32.dp else 24.dp)
+            .clip(CircleShape)
+            .background(if (selected) cc.dot else cc.bg)
+            .border(1.dp, if (selected) cc.dot else cc.border, CircleShape)
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .padding(horizontal = 9.dp, vertical = 3.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = if (onClick != null) 13.dp else 10.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(Modifier.size(6.dp).clip(CircleShape).background(cc.dot))
-        Spacer(Modifier.width(6.dp))
-        Text(name, color = cc.text, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+        Text(name, color = if (selected) Color.White else cc.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
-/** Pill with a count badge, used for the category / starred filters. */
+/** Filter chip with a count, used for the category / starred filters. */
 @Composable
 fun FilterPill(
     label: String,
@@ -98,37 +131,119 @@ fun FilterPill(
     starred: Boolean = false,
 ) {
     val c = Done.colors
-    val bg = if (selected) c.accent else c.field
-    val fg = if (selected) c.onAccent else c.text2
     Row(
         Modifier
-            .height(34.dp)
+            .height(36.dp)
             .clip(CircleShape)
-            .background(bg)
+            .background(if (selected) c.accentSoft else c.surface)
             .border(1.dp, if (selected) c.accent else c.border, CircleShape)
             .clickable(role = Role.Tab, onClick = onClick)
-            .padding(start = 12.dp, end = 6.dp),
+            .padding(start = 14.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (dotColor != null) {
-            Box(Modifier.size(7.dp).clip(CircleShape).background(if (selected) Color.White else dotColor))
+            Box(Modifier.size(8.dp).clip(CircleShape).background(dotColor))
             Spacer(Modifier.width(7.dp))
         }
         if (starred) {
-            Icon(Icons.Filled.Star, null, tint = if (selected) Color.White else c.star, modifier = Modifier.size(14.dp))
-            Spacer(Modifier.width(5.dp))
+            Icon(Icons.Filled.Star, null, tint = c.star, modifier = Modifier.size(15.dp))
+            Spacer(Modifier.width(6.dp))
         }
-        Text(label, color = fg, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+        Text(label, color = if (selected) c.accentText else c.text2, fontSize = 13.5.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+        Spacer(Modifier.width(8.dp))
+        CountBadge(count, selected)
+    }
+}
+
+@Composable
+fun CountBadge(count: Int, highlighted: Boolean = false) {
+    val c = Done.colors
+    Box(
+        Modifier
+            .heightIn(min = 22.dp)
+            .widthIn(min = 22.dp)
+            .clip(CircleShape)
+            .background(if (highlighted) c.accentSoft else c.countBg)
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("$count", color = if (highlighted) c.accentText else c.text2, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/** Soft circle with the category's initial (or a tick when there's no category). */
+@Composable
+fun CategoryIcon(category: String, size: Dp = 38.dp) {
+    val cc = categoryColors(category, Done.colors.isDark)
+    Box(
+        Modifier.size(size).clip(CircleShape).background(cc.bg),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (category.isBlank()) {
+            Icon(Icons.Filled.Check, null, tint = cc.text, modifier = Modifier.size(size * 0.48f))
+        } else {
+            Text(category.trim().first().uppercase(), color = cc.text, fontSize = (size.value * 0.4f).sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/** Soft pill with a dot, e.g. "Today" (amber) / "Yesterday" (blue) / older dates (grey). */
+@Composable
+fun ToneBadge(text: String, tone: Tone) {
+    Row(
+        Modifier.height(28.dp).clip(CircleShape).background(tone.bg).padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(7.dp).clip(CircleShape).background(tone.dot))
         Spacer(Modifier.width(7.dp))
-        Box(
-            Modifier
-                .heightIn(min = 22.dp)
-                .clip(CircleShape)
-                .background(if (selected) Color.White.copy(alpha = 0.22f) else c.hover)
-                .padding(horizontal = 7.dp, vertical = 2.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("$count", color = if (selected) Color.White else c.muted, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+        Text(text, color = tone.text, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+/** Tabs on a grey panel; the selected tab is a white pill (like the web's range tabs). */
+@Composable
+fun <T> Tabs(
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    count: (T) -> Int?,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = Done.colors
+    Row(
+        modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(c.panel)
+            .padding(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        options.forEach { o ->
+            val active = o == selected
+            Row(
+                Modifier
+                    .weight(1f)
+                    .height(38.dp)
+                    .shadow(if (active) 1.dp else 0.dp, CircleShape, clip = false)
+                    .clip(CircleShape)
+                    .background(if (active) c.surface else Color.Transparent)
+                    .clickable(role = Role.Tab) { onSelect(o) },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    label(o),
+                    color = if (active) c.text else c.text2,
+                    fontSize = 13.sp,
+                    fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                count(o)?.let {
+                    Spacer(Modifier.width(5.dp))
+                    CountBadge(it, highlighted = active)
+                }
+            }
         }
     }
 }

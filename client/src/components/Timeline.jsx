@@ -1,20 +1,8 @@
 import { useState } from 'react';
 import { EditIcon, TrashIcon, StarIcon } from './icons.jsx';
+import { CategoryIcon } from './Insights.jsx';
 import { categoryHue } from '../colors.js';
-
-function dayLabel(date) {
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return 'Today';
-  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return date.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric',
-  });
-}
+import { dayLabel, dayTone, timeOf } from '../dates.js';
 
 function groupByDay(tasks) {
   const groups = [];
@@ -27,8 +15,9 @@ function groupByDay(tasks) {
   return groups;
 }
 
-const timeOf = task =>
-  new Date(task.completedAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+export function DayBadge({ date }) {
+  return <span className={`badge tone-${dayTone(date)}`}><i />{dayLabel(date)}</span>;
+}
 
 function Chip({ category }) {
   if (!category) return null;
@@ -40,14 +29,14 @@ function Actions({ task, onEdit, onDelete, onToggleStar }) {
 
   if (confirming) {
     return (
-      <div className="actions confirming">
+      <div className="actions confirming" onClick={e => e.stopPropagation()}>
         <button className="btn-mini danger" onClick={() => onDelete(task)}>Delete</button>
         <button className="btn-mini" onClick={() => setConfirming(false)}>Cancel</button>
       </div>
     );
   }
   return (
-    <div className="actions">
+    <div className="actions" onClick={e => e.stopPropagation()}>
       <button
         className={`icon-btn star ${task.starred ? 'on' : ''}`}
         onClick={() => onToggleStar(task)}
@@ -67,33 +56,30 @@ function Actions({ task, onEdit, onDelete, onToggleStar }) {
   );
 }
 
-function DayCount({ n }) {
-  return <span className="day-count">{n} completed</span>;
-}
+const count = n => `${n} completed`;
 
-/* ---------- Timeline view ---------- */
+/* ---------- Timeline view: time · rail · card, grouped by day ---------- */
 function TimelineView({ groups, handlers }) {
   return (
     <div className="tl">
       {groups.map(g => (
         <section className="tl-day" key={g.key}>
-          <div className="tl-row tl-head">
-            <span className="day-pill">{dayLabel(g.date)}</span>
-            <span className="tl-node day-node" aria-hidden="true" />
-            <DayCount n={g.items.length} />
+          <div className="tl-head">
+            <DayBadge date={g.date} />
+            <span className="day-count">{count(g.items.length)}</span>
           </div>
           <ol className="tl-entries">
             {g.items.map(t => (
-              <li className="tl-row tl-entry" key={t.id} style={{ '--hue': categoryHue(t.category) }}>
-                <time className="tl-time" dateTime={t.completedAt}>{timeOf(t)}</time>
+              <li className="tl-entry" key={t.id} style={{ '--hue': categoryHue(t.category) }}>
+                <time className="tl-time" dateTime={t.completedAt}>{timeOf(t.completedAt)}</time>
                 <span className="tl-node" aria-hidden="true" />
-                <article className="card">
-                  <div className="card-main">
-                    <h3 className="card-title">{t.title}</h3>
-                    {t.notes && <p className="card-notes">{t.notes}</p>}
-                    {/* Time lives in the meta row on narrow screens, where the time column is hidden. */}
-                    <div className={`card-meta ${t.category ? '' : 'mobile-only'}`}>
-                      <time className="card-time" dateTime={t.completedAt}>{timeOf(t)}</time>
+                <article className="row-card" onClick={() => handlers.onEdit(t)}>
+                  <CategoryIcon category={t.category} />
+                  <div className="row-main">
+                    <h3 className="row-title">{t.title}</h3>
+                    {t.notes && <p className="row-notes">{t.notes}</p>}
+                    <div className={`row-meta ${t.category ? '' : 'narrow-only'}`}>
+                      <time className="narrow-only" dateTime={t.completedAt}>{timeOf(t.completedAt)}</time>
                       <Chip category={t.category} />
                     </div>
                   </div>
@@ -108,51 +94,46 @@ function TimelineView({ groups, handlers }) {
   );
 }
 
-/* ---------- List view ---------- */
-function ListView({ groups, handlers }) {
+/* ---------- List view: one row per task with its day badge, like a queue ---------- */
+function ListView({ tasks, handlers }) {
   return (
-    <div className="lv">
-      {groups.map(g => (
-        <section className="lv-day" key={g.key}>
-          <div className="lv-head">
-            <span className="day-pill">{dayLabel(g.date)}</span>
-            <DayCount n={g.items.length} />
-          </div>
-          <ul className="lv-items">
-            {g.items.map(t => (
-              <li key={t.id} className="card lv-item" style={{ '--hue': categoryHue(t.category) }}>
-                <div className="card-main">
-                  <div className="lv-title-row">
-                    <h3 className="card-title">{t.title}</h3>
-                    <time className="lv-time" dateTime={t.completedAt}>{timeOf(t)}</time>
-                  </div>
-                  {t.notes && <p className="card-notes">{t.notes}</p>}
-                  {t.category && <div className="card-meta"><Chip category={t.category} /></div>}
-                </div>
-                <Actions task={t} {...handlers} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
+    <ul className="lv">
+      {tasks.map(t => {
+        const date = new Date(t.completedAt);
+        return (
+          <li key={t.id} className="row-card lv-row" style={{ '--hue': categoryHue(t.category) }} onClick={() => handlers.onEdit(t)}>
+            <div className="lv-badge"><DayBadge date={date} /></div>
+            <CategoryIcon category={t.category} />
+            <div className="row-main">
+              <h3 className="row-title">{t.title}</h3>
+              {t.notes && <p className="row-notes">{t.notes}</p>}
+            </div>
+            <div className="lv-when">
+              <time dateTime={t.completedAt}>{timeOf(t.completedAt)}</time>
+              <span>{t.category || 'No category'}</span>
+            </div>
+            <Actions task={t} {...handlers} />
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
-/* ---------- Compact view ---------- */
+/* ---------- Compact view: dense rows inside one card per day ---------- */
 function CompactView({ groups, handlers }) {
   return (
     <div className="cv">
       {groups.map(g => (
         <section className="cv-day" key={g.key}>
-          <div className="cv-head">
-            <span className="cv-label">{dayLabel(g.date)}</span>
-            <DayCount n={g.items.length} />
+          <div className="tl-head">
+            <DayBadge date={g.date} />
+            <span className="day-count">{count(g.items.length)}</span>
           </div>
           <ul className="cv-box">
             {g.items.map(t => (
-              <li key={t.id} className="cv-row" style={{ '--hue': categoryHue(t.category) }}>
-                <time className="cv-time" dateTime={t.completedAt}>{timeOf(t)}</time>
+              <li key={t.id} className="cv-row" style={{ '--hue': categoryHue(t.category) }} onClick={() => handlers.onEdit(t)}>
+                <time className="cv-time" dateTime={t.completedAt}>{timeOf(t.completedAt)}</time>
                 <span className="cv-dot" aria-hidden="true" />
                 <span className="cv-title" title={t.notes || t.title}>{t.title}</span>
                 <Chip category={t.category} />
@@ -167,9 +148,9 @@ function CompactView({ groups, handlers }) {
 }
 
 export default function TaskViews({ view, tasks, onEdit, onDelete, onToggleStar }) {
-  const groups = groupByDay(tasks);
   const handlers = { onEdit, onDelete, onToggleStar };
-  if (view === 'list') return <ListView groups={groups} handlers={handlers} />;
+  if (view === 'list') return <ListView tasks={tasks} handlers={handlers} />;
+  const groups = groupByDay(tasks);
   if (view === 'compact') return <CompactView groups={groups} handlers={handlers} />;
   return <TimelineView groups={groups} handlers={handlers} />;
 }

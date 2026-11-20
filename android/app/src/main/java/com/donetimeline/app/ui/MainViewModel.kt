@@ -30,7 +30,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 enum class Range(val label: String, val days: Int?) {
-    TODAY("Today", 1), WEEK("7 Days", 7), MONTH("30 Days", 30), ALL("All", null)
+    ALL("All", null), TODAY("Today", 1), WEEK("7 days", 7), MONTH("30 days", 30)
 }
 
 sealed interface Filter {
@@ -39,7 +39,9 @@ sealed interface Filter {
     data class Category(val name: String) : Filter
 }
 
-data class Stats(val today: Int, val week: Int, val total: Int, val streak: Int)
+data class Stats(val today: Int, val week: Int, val total: Int, val streak: Int, val bestDay: Int = 0, val starred: Int = 0)
+
+data class WeekDay(val date: LocalDate, val count: Int)
 
 data class DayGroup(val date: LocalDate, val tasks: List<Task>)
 
@@ -54,6 +56,9 @@ data class UiState(
     val inScopeCount: Int = 0,
     val starredCount: Int = 0,
     val stats: Stats = Stats(0, 0, 0, 0),
+    val week: List<WeekDay> = emptyList(),
+    val rangeCounts: Map<Range, Int> = emptyMap(),
+    val latest: Task? = null,
     val filter: Filter = Filter.All,
     val range: Range = Range.WEEK,
     val query: String = "",
@@ -67,7 +72,9 @@ data class UiState(
 private data class Controls(val filter: Filter, val range: Range, val query: String)
 
 /** Signed-in user plus their tasks; snapshot is null while the first load is running. */
-private data class Session(val user: FirebaseUser?, val snapshot: TaskSnapshot?)
+private data class Session(val user: Account?, val snapshot: TaskSnapshot?)
+
+private fun FirebaseUser.toAccount() = Account(displayName.orEmpty(), email.orEmpty())
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(private val container: AppContainer) : ViewModel() {
@@ -78,18 +85,27 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     private val messages = Channel<String>(Channel.BUFFERED)
     val messageFlow = messages.receiveAsFlow()
 
-    private val session = auth.user
+    /** Debug-only preview data; when set, it replaces the signed-in session. */
+    private val demo = MutableStateFlow<List<Task>?>(null)
+
+    private val firebaseSession = auth.user
         .onStart { emit(auth.currentUser) }
         .flatMapLatest { user ->
             if (user == null) flowOf(Session(null, null))
             else repo.observe(user.uid)
-                .map { Session(user, it) }
-                .onStart { emit(Session(user, null)) }
+                .map { Session(user.toAccount(), it) }
+                .onStart { emit(Session(user.toAccount(), null)) }
                 .catch { e -> onListenError(e) }
         }
 
+    private val session = combine(demo, firebaseSession) { d, s ->
+        if (d != null) Session(Account("Demo", "demo@example.com"), TaskSnapshot(d, pendingWrites = false, fromCache = false)) else s
+    }
+
+    fun startDemo(tasks: List<Task>) { demo.value = tasks }
+
     val state: StateFlow<UiState> = combine(session, controls) { s, c -> buildState(s, c) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), buildState(Session(auth.currentUser, null), controls.value))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), buildState(Session(auth.currentUser?.toAccount(), null), controls.value))
 
     init {
         viewModelScope.launch { container.writeErrors.collect { messages.send(describe(it)) } }
@@ -152,11 +168,20 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             (start == null || !dateOf(t).isBefore(start)) &&
                 (q.isEmpty() || "${t.title} ${t.notes} ${t.category}".lowercase().contains(q))
         }
-        val visible = when (val f = c.filter) {
-            Filter.All -> inScope
-            Filter.Starred -> inScope.filter { it.starred }
-            is Filter.Category -> inScope.filter { it.category == f.name }
+        fun matchesFilter(t: Task) = when (val f = c.filter) {
+            Filter.All -> true
+            Filter.Starred -> t.starred
+            is Filter.Category -> t.category == f.name
         }
+        val visible = inScope.filter(::matchesFilter)
+
+        // Tab counts: search + category filter applied, for every range.
+        val base = all.filter { matchesFilter(it) && (q.isEmpty() || "${it.title} ${it.notes} ${it.category}".lowercase().contains(q)) }
+        val rangeCounts = Range.entries.associateWith { r ->
+            val s = r.days?.let { today.minusDays((it - 1).toLong()) }
+            base.count { s == null || !dateOf(it).isBefore(s) }
+        }
+        val perDay = all.groupingBy(::dateOf).eachCount()
 
         val days = all.map(::dateOf).toSet()
         var cursor = if (today in days) today else today.minusDays(1)
@@ -177,11 +202,16 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 week = all.count { !dateOf(it).isBefore(weekStart) },
                 total = all.size,
                 streak = streak,
+                bestDay = perDay.values.maxOrNull() ?: 0,
+                starred = all.count { it.starred },
             ),
+            week = (6 downTo 0).map { val d = today.minusDays(it.toLong()); WeekDay(d, perDay[d] ?: 0) },
+            rangeCounts = rangeCounts,
+            latest = all.maxByOrNull { it.completedAt },
             filter = c.filter,
             range = c.range,
             query = c.query,
-            account = session.user?.let { Account(it.displayName.orEmpty(), it.email.orEmpty()) },
+            account = session.user,
             pendingWrites = session.snapshot?.pendingWrites == true,
             offline = session.snapshot?.fromCache == true,
         )

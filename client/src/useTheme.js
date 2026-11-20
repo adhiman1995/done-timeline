@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 
-const THEME_COLORS = { dark: '#070b16', light: '#f4f6fb' };
+const THEME_COLORS = { dark: '#0b0f16', light: '#f5f6f8' };
 
 export function useTheme() {
-  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || 'dark');
+  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || 'light');
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;

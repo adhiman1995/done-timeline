@@ -1,15 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ticked mark: a ring with a tick breaking out through its gap.
+  Same geometry as client/public/icon.svg (64-unit box), scaled ×1.15 and centred in the
+  108dp adaptive-icon canvas so it sits inside the 66dp safe zone.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Check mark, sized for the adaptive-icon safe zone (centre 66dp). -->
-    <path
-        android:pathData="M38,55.5 L49,66.5 L71,42.5"
-        android:strokeWidth="7"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
+    <group
+        android:scaleX="1.15"
+        android:scaleY="1.15"
+        android:translateX="17.2"
+        android:translateY="17.2">
+        <group
+            android:translateX="-1.2"
+            android:translateY="1">
+            <path
+                android:pathData="M37.3,17.4 A15.5,15.5 0 1,0 47.44,30.65"
+                android:strokeWidth="4.6"
+                android:strokeColor="#FFFFFF"
+                android:strokeLineCap="round"
+                android:fillColor="#00000000" />
+            <path
+                android:pathData="M23.8,31.6 L30.6,38.4 L48.5,18.5"
+                android:strokeWidth="4.6"
+                android:strokeColor="#FFFFFF"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round"
+                android:fillColor="#00000000" />
+        </group>
+    </group>
 </vector>

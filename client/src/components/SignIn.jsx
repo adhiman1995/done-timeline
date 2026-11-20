@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { signInWithGoogle } from '../firebase.js';
-import { CheckIcon } from './icons.jsx';
+import { Logo } from './icons.jsx';
 
 function GoogleIcon() {
   return (
@@ -34,11 +34,14 @@ export default function SignIn({ notice }) {
     <div className="connect-page">
       <div className="modal connect-card">
         <div className="connect-title">
-          <div className="logo"><CheckIcon width={20} height={20} strokeWidth={2.5} /></div>
-          <h2>Done Timeline</h2>
+          <Logo size={44} />
+          <div>
+            <h2>Ticked</h2>
+            <div className="connect-tag">Everything you've finished, on one timeline</div>
+          </div>
         </div>
         <p className="connect-intro">
-          Sign in to see your timeline. Your tasks sync between this website and the Android app.
+          Sign in to see your timeline. Your tasks sync between this website and the Ticked Android app.
         </p>
         {(notice || error) && <div className="alert">{notice || error}</div>}
         <button className="btn google-btn" onClick={signIn} disabled={busy}>

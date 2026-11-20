@@ -15,19 +15,28 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+/** A soft badge tone: background, text and dot colours. */
+@Immutable
+data class Tone(val bg: Color, val text: Color, val dot: Color)
+
 /** Design tokens shared with the web app (client/src/styles.css). */
 @Immutable
 data class DoneColors(
     val isDark: Boolean,
     val bg: Color,
+    /** Grey container that groups white cards. */
+    val panel: Color,
+    /** Card background. */
     val surface: Color,
     val surfaceSolid: Color,
+    /** Hairline card border. */
     val border: Color,
     val borderStrong: Color,
     val text: Color,
     val text2: Color,
     val muted: Color,
     val accent: Color,
+    val accentSoft: Color,
     val accentText: Color,
     val onAccent: Color,
     val star: Color,
@@ -35,52 +44,68 @@ data class DoneColors(
     val rail: Color,
     val field: Color,
     val hover: Color,
+    val countBg: Color,
+    val today: Tone,
+    val week: Tone,
+    val older: Tone,
 ) {
-    val gradient get() = Brush.linearGradient(listOf(Color(0xFF3B82F6), Color(0xFF5B5FF0)))
-    val logoGradient get() = Brush.linearGradient(listOf(Color(0xFF60A5FA), Color(0xFF5B5FF0)))
+    val gradient get() = Brush.linearGradient(listOf(Color(0xFF4B8BFF), Color(0xFF2E6BE6)))
+    val logoGradient get() = Brush.linearGradient(listOf(Color(0xFF5B9BFF), Color(0xFF2E6BE6)))
 }
-
-val DarkTokens = DoneColors(
-    isDark = true,
-    bg = Color(0xFF080C18),
-    surface = Color(0xFF111A2D),
-    surfaceSolid = Color(0xFF0F1729),
-    border = Color(0x1F7896DC),
-    borderStrong = Color(0x3D78A0FF),
-    text = Color(0xFFE8EEFC),
-    text2 = Color(0xFFA3B0CC),
-    muted = Color(0xFF6F7C9A),
-    accent = Color(0xFF3B82F6),
-    accentText = Color(0xFF7FB0FF),
-    onAccent = Color.White,
-    star = Color(0xFFFBBF24),
-    danger = Color(0xFFF87171),
-    rail = Color(0x593B82F6),
-    field = Color(0x09FFFFFF),
-    hover = Color(0x0FFFFFFF),
-)
 
 val LightTokens = DoneColors(
     isDark = false,
-    bg = Color(0xFFF4F6FB),
+    bg = Color(0xFFF5F6F8),
+    panel = Color(0xFFECEFF3),
     surface = Color.White,
     surfaceSolid = Color.White,
-    border = Color(0x171E3264),
-    borderStrong = Color(0x3D3B6EDC),
-    text = Color(0xFF142038),
-    text2 = Color(0xFF4B5876),
-    muted = Color(0xFF8591AB),
-    accent = Color(0xFF3B82F6),
+    border = Color(0xFFEBEEF2),
+    borderStrong = Color(0xFFE3E7ED),
+    text = Color(0xFF101828),
+    text2 = Color(0xFF4B5565),
+    muted = Color(0xFF8A94A6),
+    accent = Color(0xFF3B7BF6),
+    accentSoft = Color(0xFFE7EFFE),
     accentText = Color(0xFF2563EB),
     onAccent = Color.White,
-    star = Color(0xFFF59E0B),
-    danger = Color(0xFFDC2626),
-    rail = Color(0x403B82F6),
-    field = Color.White,
-    hover = Color(0x0F1E3264),
+    star = Color(0xFFF5A524),
+    danger = Color(0xFFC3373C),
+    rail = Color(0xFFE3E7ED),
+    field = Color(0xFFF4F6F9),
+    hover = Color(0xFFEEF1F5),
+    countBg = Color(0xFFE6E9EF),
+    today = Tone(Color(0xFFFDF0E1), Color(0xFFB4621A), Color(0xFFF59E0B)),
+    week = Tone(Color(0xFFE7EFFE), Color(0xFF2563EB), Color(0xFF3B7BF6)),
+    older = Tone(Color(0xFFEEF0F3), Color(0xFF5B6574), Color(0xFFA3ABB8)),
 )
 
-val LocalDoneColors = staticCompositionLocalOf { DarkTokens }
+val DarkTokens = DoneColors(
+    isDark = true,
+    bg = Color(0xFF0B0F16),
+    panel = Color(0xFF111620),
+    surface = Color(0xFF171E2A),
+    surfaceSolid = Color(0xFF171E2A),
+    border = Color(0xFF1E2633),
+    borderStrong = Color(0xFF252E3D),
+    text = Color(0xFFE9EDF4),
+    text2 = Color(0xFFA6B0C0),
+    muted = Color(0xFF6F7A8D),
+    accent = Color(0xFF4D8BF7),
+    accentSoft = Color(0x264D8BF7),
+    accentText = Color(0xFF85B4FF),
+    onAccent = Color.White,
+    star = Color(0xFFF7B73A),
+    danger = Color(0xFFFF8B8F),
+    rail = Color(0xFF252E3D),
+    field = Color(0xFF10151E),
+    hover = Color(0x0DFFFFFF),
+    countBg = Color(0x14FFFFFF),
+    today = Tone(Color(0x24F59E0B), Color(0xFFF4B55A), Color(0xFFF59E0B)),
+    week = Tone(Color(0x264D8BF7), Color(0xFF8FBAFF), Color(0xFF4D8BF7)),
+    older = Tone(Color(0x0FFFFFFF), Color(0xFFA6B0C0), Color(0xFF6F7A8D)),
+)
+
+val LocalDoneColors = staticCompositionLocalOf { LightTokens }
 
 object Done {
     val colors: DoneColors
@@ -105,14 +130,19 @@ fun categoryHue(name: String): Float {
 
 data class CategoryColors(val dot: Color, val text: Color, val bg: Color, val border: Color)
 
+/** Same formulas as the web's .chip / .cat-icon / dots. */
 fun categoryColors(name: String, dark: Boolean): CategoryColors {
     val hue = categoryHue(name)
-    val dot = Color.hsl(hue, 0.80f, if (dark) 0.62f else 0.50f)
-    return CategoryColors(
-        dot = dot,
-        text = Color.hsl(hue, 0.75f, if (dark) 0.76f else 0.36f),
-        bg = Color.hsl(hue, 0.80f, 0.58f, alpha = if (dark) 0.13f else 0.10f),
-        border = Color.hsl(hue, 0.80f, 0.60f, alpha = 0.22f),
+    return if (dark) CategoryColors(
+        dot = Color.hsl(hue, 0.72f, 0.60f),
+        text = Color.hsl(hue, 0.85f, 0.76f),
+        bg = Color.hsl(hue, 0.45f, 0.22f, alpha = 0.6f),
+        border = Color.hsl(hue, 0.45f, 0.35f, alpha = 0.6f),
+    ) else CategoryColors(
+        dot = Color.hsl(hue, 0.72f, 0.56f),
+        text = Color.hsl(hue, 0.55f, 0.40f),
+        bg = Color.hsl(hue, 0.85f, 0.95f),
+        border = Color.hsl(hue, 0.70f, 0.89f),
     )
 }
 
@@ -131,10 +161,10 @@ fun DoneTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> 
         darkColorScheme(
             primary = t.accent, onPrimary = t.onAccent,
             background = t.bg, onBackground = t.text,
-            surface = t.surfaceSolid, onSurface = t.text,
-            surfaceVariant = t.surface, onSurfaceVariant = t.text2,
-            surfaceContainer = t.surface, surfaceContainerHigh = Color(0xFF16213A),
-            surfaceContainerHighest = Color(0xFF1B2742), surfaceContainerLow = t.surfaceSolid,
+            surface = t.surface, onSurface = t.text,
+            surfaceVariant = t.panel, onSurfaceVariant = t.text2,
+            surfaceContainer = t.surface, surfaceContainerHigh = t.surface,
+            surfaceContainerHighest = t.panel, surfaceContainerLow = t.surface,
             outline = t.borderStrong, outlineVariant = t.border,
             error = t.danger,
         )
@@ -142,10 +172,10 @@ fun DoneTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> 
         lightColorScheme(
             primary = t.accent, onPrimary = t.onAccent,
             background = t.bg, onBackground = t.text,
-            surface = t.surfaceSolid, onSurface = t.text,
-            surfaceVariant = Color(0xFFEEF2FA), onSurfaceVariant = t.text2,
+            surface = t.surface, onSurface = t.text,
+            surfaceVariant = t.panel, onSurfaceVariant = t.text2,
             surfaceContainer = Color.White, surfaceContainerHigh = Color.White,
-            surfaceContainerHighest = Color(0xFFEEF2FA), surfaceContainerLow = Color.White,
+            surfaceContainerHighest = t.panel, surfaceContainerLow = Color.White,
             outline = t.borderStrong, outlineVariant = t.border,
             error = t.danger,
         )

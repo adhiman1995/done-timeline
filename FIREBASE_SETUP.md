@@ -10,7 +10,7 @@ Console: https://console.firebase.google.com
 ## 1. Create the project
 
 1. Click **Create a project** (or **Add project**).
-2. Name it `Done Timeline`, then click **Continue**.
+2. Name it `Ticked`, then click **Continue**.
 3. Turn **Google Analytics** off. The app doesn't need it.
 4. Click **Create project**, wait for it to finish, then click **Continue**.
 
@@ -56,7 +56,7 @@ The rules are what protect your data. The Firebase settings inside the website a
 ## 5. Register the website
 
 1. Go to **Project Overview** (the home icon) and click the **Web** icon `</>`.
-2. Use the nickname `Done Timeline Web`.
+2. Use the nickname `Ticked Web`.
 3. Leave **Firebase Hosting** unticked, because the site is hosted on GitHub Pages.
 4. Click **Register app**.
 5. Copy the `firebaseConfig` object it shows. It looks like this:
@@ -80,7 +80,7 @@ The rules are what protect your data. The Firebase settings inside the website a
 1. Go to **Project Overview → Add app** and choose the **Android** icon.
 2. Fill in the form:
    - **Package name:** `com.donetimeline.app`
-   - **Nickname:** `Done Timeline Android`
+   - **Nickname:** `Ticked Android`
    - **Debug signing certificate SHA-1** (the debug key on this Mac):
      ```
      A1:54:39:25:EE:87:BE:03:77:18:5A:3F:13:17:F5:6F:E7:20:5B:8C

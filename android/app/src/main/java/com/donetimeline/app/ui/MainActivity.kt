@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.donetimeline.app.DemoData
 import com.donetimeline.app.DoneApp
 import com.donetimeline.app.ui.theme.DoneTheme
 
@@ -20,6 +21,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Debug builds: `--ez demo true` previews the UI with sample data (DemoData is null in release).
+        if (intent.getBooleanExtra("demo", false)) DemoData.tasks()?.let(vm::startDemo)
         setContent {
             DoneTheme {
                 val state by vm.state.collectAsStateWithLifecycle()

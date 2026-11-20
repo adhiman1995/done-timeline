@@ -6,6 +6,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -74,9 +77,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-private val TimeCol = 62.dp
-private val RailCol = 28.dp
-private val NodeY = 23.dp // card top padding (12) + half the title line (22 / 2)
+private val TimeCol = 60.dp
+private val RailCol = 26.dp
+private val NodeY = 33.dp // card top padding (14) + half the category icon (38 / 2)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,21 +102,18 @@ fun TimelineScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 120.dp),
                 ) {
-                    item("stats") { StatsGrid(state.stats) }
-                    item("title") {
-                        Text(
-                            "Timeline",
-                            color = c.text, fontSize = 21.sp, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 24.dp, bottom = 12.dp),
-                        )
-                    }
-                    item("filters") { FilterRow(state, vm) }
+                    item("head") { PageHeader(state) }
+                    item("week") { WeekCard(state, onOpen = { editor = EditorTarget(it) }) }
+                    item("stats") { StatsRow(state.stats) }
                     item("range") {
-                        Segmented(
+                        Tabs(
                             options = Range.entries, selected = state.range, label = { it.label },
-                            onSelect = vm::setRange, modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 20.dp),
+                            count = { state.rangeCounts[it] }, onSelect = vm::setRange,
+                            modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
                         )
                     }
+                    item("filters") { Box(Modifier.padding(top = 12.dp)) { FilterRow(state, vm) } }
+                    item("list-head") { ListHeader(state) }
 
                     if (state.loaded && state.groups.isEmpty()) {
                         item("empty") { EmptyState(state, vm) }
@@ -121,12 +121,12 @@ fun TimelineScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
 
                     state.groups.forEachIndexed { gi, group ->
                         item(key = "day-${group.date}") { DayHeader(group, first = gi == 0) }
-                        val lastGroup = gi == state.groups.lastIndex
                         group.tasks.forEachIndexed { ti, task ->
                             item(key = task.id) {
                                 TimelineEntry(
                                     task = task,
-                                    last = lastGroup && ti == group.tasks.lastIndex,
+                                    first = ti == 0,
+                                    last = ti == group.tasks.lastIndex,
                                     onClick = { editor = EditorTarget(task) },
                                     onStar = { vm.toggleStar(task.id) },
                                 )
@@ -208,7 +208,7 @@ private fun TopBar(state: UiState, vm: MainViewModel, onOpenSettings: () -> Unit
                     AppLogo()
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Done Timeline", color = c.text, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Text("Ticked", color = c.text, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         SyncStatus(state)
                     }
                     IconButton(onClick = { searching = true }) { Icon(Icons.Filled.Search, "Search", tint = c.text2) }
@@ -235,16 +235,93 @@ private fun SyncStatus(state: UiState) {
 /* ---------------------------------------------------------------- Header content */
 
 @Composable
-private fun StatsGrid(stats: Stats) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatCard("Today", "${stats.today}", Modifier.weight(1f))
-            StatCard("Last 7 days", "${stats.week}", Modifier.weight(1f))
+private fun PageHeader(state: UiState) {
+    val c = Done.colors
+    val now = remember { java.time.LocalDateTime.now() }
+    val shown = state.groups.sumOf { it.tasks.size }
+    val rangeText = when (state.range) {
+        Range.ALL -> "all time"; Range.TODAY -> "today"; Range.WEEK -> "last 7 days"; Range.MONTH -> "last 30 days"
+    }
+    Column(Modifier.padding(top = 8.dp, bottom = 16.dp)) {
+        Text("Timeline", color = c.text, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp)
+        Text(
+            "${now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM"))} · $shown task${if (shown == 1) "" else "s"}, $rangeText",
+            color = c.text2, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
+        )
+    }
+}
+
+@Composable
+private fun WeekCard(state: UiState, onOpen: (Task) -> Unit) {
+    val c = Done.colors
+    val total = state.week.sumOf { it.count }
+    val active = state.week.count { it.count > 0 }
+    DoneCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("This week", color = c.text, fontSize = 16.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("$total task${if (total == 1) "" else "s"}", color = c.muted, fontSize = 13.sp)
+            }
+            Text("$active of 7 days active", color = c.text2, fontSize = 13.5.sp, modifier = Modifier.padding(top = 2.dp, bottom = 14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                state.week.forEachIndexed { i, d ->
+                    val today = i == state.week.lastIndex
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            Modifier
+                                .size(38.dp)
+                                .then(if (today) Modifier.border(2.dp, c.accentSoft, CircleShape).padding(3.dp) else Modifier)
+                                .clip(CircleShape)
+                                .background(if (d.count > 0) c.accent else c.hover),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                if (d.count > 0) "${d.count}" else "${d.date.dayOfMonth}",
+                                color = if (d.count > 0) Color.White else c.muted,
+                                fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                        Text(
+                            d.date.dayOfWeek.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.getDefault()),
+                            color = c.muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp),
+                        )
+                    }
+                }
+            }
+            state.latest?.let { latest ->
+                Row(
+                    Modifier
+                        .padding(top = 16.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .border(1.dp, c.border, RoundedCornerShape(14.dp))
+                        .clickable { onOpen(latest) }
+                        .padding(start = 12.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CategoryIcon(latest.category, 34.dp)
+                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                        Text("Latest: ${latest.title}", color = c.text, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            relativeTime(latest.completedAt) + if (latest.category.isNotBlank()) " · ${latest.category}" else "",
+                            color = c.muted, fontSize = 12.5.sp, maxLines = 1,
+                        )
+                    }
+                    Box(Modifier.size(30.dp).border(1.dp, c.borderStrong, CircleShape), contentAlignment = Alignment.Center) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = c.text2, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatCard("All time", "${stats.total}", Modifier.weight(1f))
-            StatCard("Streak", "${stats.streak}", Modifier.weight(1f), suffix = if (stats.streak == 1) "day" else "days", flame = stats.streak > 0)
-        }
+    }
+}
+
+@Composable
+private fun StatsRow(stats: Stats) {
+    Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        StatCard("All time", "${stats.total}", Modifier.weight(1f))
+        StatCard("Streak", "${stats.streak}", Modifier.weight(1f), suffix = if (stats.streak == 1) "day" else "days", flame = stats.streak > 0)
+        StatCard("Best day", "${stats.bestDay}", Modifier.weight(1f))
     }
 }
 
@@ -252,17 +329,30 @@ private fun StatsGrid(stats: Stats) {
 private fun StatCard(label: String, value: String, modifier: Modifier, suffix: String? = null, flame: Boolean = false) {
     val c = Done.colors
     DoneCard(modifier) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-            SectionLabel(label)
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, color = c.text, fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 30.sp)
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Text(label, color = c.text2, fontSize = 12.5.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 2.dp)) {
+                Text(value, color = c.text, fontSize = 26.sp, fontWeight = FontWeight.Bold, lineHeight = 30.sp, letterSpacing = (-0.5).sp)
                 if (suffix != null) {
-                    Spacer(Modifier.width(6.dp))
-                    Text(suffix, color = c.muted, fontSize = 12.5.sp, modifier = Modifier.padding(bottom = 4.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(suffix, color = c.muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
                 }
-                if (flame) Text(" 🔥", fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp))
+                if (flame) Text(" 🔥", fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun ListHeader(state: UiState) {
+    val c = Done.colors
+    val n = state.groups.sumOf { it.tasks.size }
+    Row(Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("$n task${if (n == 1) "" else "s"}", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(8.dp))
+        Text("Newest first", color = c.muted, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        Box(Modifier.clip(CircleShape).background(c.accentSoft).padding(horizontal = 10.dp, vertical = 4.dp)) {
+            Text(state.range.label, color = c.accentText, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -336,97 +426,73 @@ private fun dayLabel(date: LocalDate): String {
     }
 }
 
-/**
- * Draws the vertical rail plus a node at [nodeY]. Line segments are drawn per row with no
- * gaps between rows, so together they form one continuous rail.
- */
+/** Draws the rail segment for one row plus a filled node at [nodeY]. */
 private fun Modifier.rail(
-    lineColor: Color, nodeColor: Color, bgColor: Color,
-    nodeY: androidx.compose.ui.unit.Dp?, dayNode: Boolean, lineFromNode: Boolean, lineToNode: Boolean,
+    lineColor: Color, nodeColor: Color, ringColor: Color,
+    nodeY: androidx.compose.ui.unit.Dp, lineFromNode: Boolean, lineToNode: Boolean,
 ) = drawBehind {
     val x = size.width / 2
-    val y = nodeY?.toPx() ?: (size.height / 2)
-    val stroke = 2.dp.toPx()
-    drawLine(lineColor, Offset(x, if (lineFromNode) y else 0f), Offset(x, if (lineToNode) y else size.height), stroke)
-    if (dayNode) {
-        drawCircle(lineColor, radius = 10.dp.toPx(), center = Offset(x, y))
-        drawCircle(bgColor, radius = 8.dp.toPx(), center = Offset(x, y))
-        drawCircle(nodeColor, radius = 6.dp.toPx(), center = Offset(x, y))
-    } else {
-        drawCircle(bgColor, radius = 9.dp.toPx(), center = Offset(x, y))
-        drawCircle(bgColor, radius = 5.dp.toPx(), center = Offset(x, y))
-        drawCircle(nodeColor, radius = 5.dp.toPx(), center = Offset(x, y), style = Stroke(2.dp.toPx()))
-    }
+    val y = nodeY.toPx()
+    drawLine(lineColor, Offset(x, if (lineFromNode) y else 0f), Offset(x, if (lineToNode) y else size.height), 2.dp.toPx())
+    drawCircle(ringColor, radius = 10.dp.toPx(), center = Offset(x, y))
+    drawCircle(nodeColor, radius = 6.dp.toPx(), center = Offset(x, y))
 }
 
-private val PillHeight = 28.dp
+private fun dayTone(date: LocalDate, c: com.donetimeline.app.ui.theme.DoneColors) = when {
+    date == LocalDate.now() -> c.today
+    !date.isBefore(LocalDate.now().minusDays(6)) -> c.week
+    else -> c.older
+}
 
 @Composable
 private fun DayHeader(group: DayGroup, first: Boolean) {
     val c = Done.colors
-    val topPad = if (first) 0.dp else 18.dp
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-        Spacer(Modifier.width(TimeCol))
-        Box(
-            Modifier.width(RailCol).fillMaxHeight()
-                .rail(c.rail, c.accent, c.bg, nodeY = topPad + PillHeight / 2, dayNode = true, lineFromNode = first, lineToNode = false),
-        )
-        Row(
-            Modifier.padding(start = 8.dp, top = topPad, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                Modifier
-                    .height(PillHeight)
-                    .clip(CircleShape)
-                    .background(c.surfaceSolid)
-                    .border(1.dp, c.borderStrong, CircleShape)
-                    .padding(horizontal = 12.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(dayLabel(group.date), color = c.text, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
-            }
-            Spacer(Modifier.width(10.dp))
-            Text("${group.tasks.size} completed", color = c.muted, fontSize = 12.5.sp)
-        }
+    Row(
+        Modifier.padding(top = if (first) 0.dp else 20.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ToneBadge(dayLabel(group.date), dayTone(group.date, c))
+        Spacer(Modifier.width(10.dp))
+        Text("${group.tasks.size} completed", color = c.muted, fontSize = 12.5.sp)
     }
 }
 
 @Composable
-private fun TimelineEntry(task: Task, last: Boolean, onClick: () -> Unit, onStar: () -> Unit) {
+private fun TimelineEntry(task: Task, first: Boolean, last: Boolean, onClick: () -> Unit, onStar: () -> Unit) {
     val c = Done.colors
     val time = remember(task.completedAt) {
         Instant.ofEpochMilli(task.completedAt).atZone(ZoneId.systemDefault()).format(timeFormat)
     }
-    val nodeColor = if (task.category.isBlank()) c.accent else categoryColors(task.category, c.isDark).dot
+    val nodeColor = categoryColors(task.category, c.isDark).dot
 
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
         Text(
             time,
-            color = c.muted, fontSize = 12.sp, textAlign = TextAlign.End, maxLines = 1,
+            color = c.text2, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, maxLines = 1,
             modifier = Modifier.width(TimeCol).padding(top = NodeY - 9.dp),
         )
         Box(
             Modifier.width(RailCol).fillMaxHeight()
-                .rail(c.rail, nodeColor, c.bg, nodeY = NodeY, dayNode = false, lineFromNode = false, lineToNode = last),
+                .rail(c.rail, nodeColor, c.bg, nodeY = NodeY, lineFromNode = first, lineToNode = last),
         )
-        DoneCard(Modifier.weight(1f).padding(start = 8.dp, bottom = 10.dp), onClick = onClick) {
-            Row(Modifier.padding(start = 14.dp, top = 12.dp, bottom = 12.dp, end = 2.dp)) {
-                Column(Modifier.weight(1f)) {
-                    Text(task.title, color = c.text, fontSize = 15.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold)
+        DoneCard(Modifier.weight(1f).padding(start = 4.dp, bottom = 8.dp), onClick = onClick) {
+            Row(Modifier.padding(start = 14.dp, top = 14.dp, bottom = 14.dp, end = 4.dp)) {
+                CategoryIcon(task.category)
+                Column(Modifier.weight(1f).padding(start = 12.dp, top = 1.dp)) {
+                    Text(task.title, color = c.text, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
                     if (task.notes.isNotBlank()) {
-                        Text(task.notes, color = c.text2, fontSize = 13.5.sp, lineHeight = 19.sp, maxLines = 3, modifier = Modifier.padding(top = 2.dp))
+                        Text(task.notes, color = c.text2, fontSize = 13.5.sp, lineHeight = 19.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
                     }
                     if (task.category.isNotBlank()) {
-                        CategoryChip(task.category, Modifier.padding(top = 10.dp))
+                        CategoryChip(task.category, Modifier.padding(top = 8.dp))
                     }
                 }
-                IconButton(onClick = onStar, modifier = Modifier.size(36.dp).padding(0.dp)) {
+                IconButton(onClick = onStar, modifier = Modifier.size(34.dp)) {
                     Icon(
                         Icons.Filled.Star,
                         contentDescription = if (task.starred) "Unstar" else "Star",
-                        tint = if (task.starred) c.star else c.muted.copy(alpha = 0.3f),
-                        modifier = Modifier.size(19.dp),
+                        tint = if (task.starred) c.star else c.muted.copy(alpha = 0.25f),
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }

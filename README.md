@@ -1,6 +1,6 @@
-# Done Timeline
+# Ticked
 
-Log the tasks you've completed and see them on a timeline — on the web and on Android.
+Everything you've finished, on one timeline — on the web and on Android.
 There's no server to run: both apps sign in with Google and store tasks in **Firebase**.
 
 ```
@@ -18,6 +18,7 @@ There's no server to run: both apps sign in with Google and store tasks in **Fir
 | ------------------ | -------------------------------------------------------------- |
 | `client/`          | React + Vite web app, published to GitHub Pages                |
 | `android/`         | Native Android app (Kotlin, Jetpack Compose, Firestore)        |
+| `client/public/icon.svg` | App icon (the Android launcher icon uses the same geometry) |
 | `firestore.rules`  | Security rules — paste into the Firebase console               |
 | `FIREBASE_SETUP.md`| One-time Firebase project setup                                |
 
@@ -43,6 +44,9 @@ Live site: https://adhiman1995.github.io/done-timeline/
 npm run install:all
 npm run dev          # http://localhost:5173
 ```
+
+Preview the UI without signing in: http://localhost:5173/?demo (sample data, development only).
+On Android debug builds: `adb shell am start -n com.donetimeline.app/.ui.MainActivity --ez demo true`.
 
 `localhost` is an authorized domain in Firebase by default, so sign-in works locally.
 
