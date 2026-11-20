@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "283206404389-smg3u887c69ge8ijaodh87bvev9lgjtv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.donetimeline.app",
+            "certificate_hash": "a1543925ee87be0377185a3f1317f56fe7205b8c"
+          }
+        },
+        {
           "client_id": "283206404389-al70uerq5jhvjg1th5na1oqi1ueq00bn.apps.googleusercontent.com",
           "client_type": 3
         }
