@@ -124,7 +124,7 @@ fun RichText(text: String) {
 }
 
 @Composable
-private fun bold(s: String): AnnotatedString {
+fun bold(s: String): AnnotatedString {
     val c = Done.colors
     return buildAnnotatedString {
         s.split("**").forEachIndexed { i, part ->

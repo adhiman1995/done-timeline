@@ -25,14 +25,33 @@ export function weeklyInput(tasks) {
   return { lines: toLines(list), period: `the last 7 days (${fmt(start.toISOString()).split(',')[0]} to today)`, count: list.length };
 }
 
-/** Tasks since the start of the previous working day (Friday when it's Monday), plus anything done today. */
-export function standupInput(tasks) {
-  const today = startOfDay(new Date());
-  const back = today.getDay() === 1 ? 3 : today.getDay() === 0 ? 2 : 1;
-  const start = new Date(today);
-  start.setDate(today.getDate() - back);
-  const list = tasks.filter(t => new Date(t.completedAt) >= start);
-  return { lines: toLines(list), period: back === 1 ? 'yesterday and today so far' : 'the last working day and today so far', count: list.length };
+const isMondayish = () => [0, 1].includes(new Date().getDay());
+
+/** Standup time windows. Standups only use tasks tagged "Work". */
+export const STANDUP_PERIODS = [
+  { key: 'yesterday', label: () => (isMondayish() ? 'Since Friday' : 'Since yesterday'),
+    back: () => ({ 0: 2, 1: 3 })[new Date().getDay()] ?? 1,
+    heading: () => (isMondayish() ? 'Since Friday' : 'Yesterday'),
+    text: () => (isMondayish() ? 'since Friday' : 'yesterday and today') },
+  { key: 'today', label: () => 'Today', back: () => 0, heading: () => 'Done today', text: () => 'today' },
+  { key: '3d', label: () => 'Last 3 days', back: () => 2, heading: () => 'Last 3 days', text: () => 'in the last 3 days' },
+  { key: 'week', label: () => 'This week', back: () => (new Date().getDay() + 6) % 7, heading: () => 'This week', text: () => 'this week' },
+];
+
+export const isWork = t => t.category.trim().toLowerCase() === 'work';
+
+export function standupInput(tasks, periodKey = 'yesterday') {
+  const p = STANDUP_PERIODS.find(x => x.key === periodKey) ?? STANDUP_PERIODS[0];
+  const start = startOfDay(new Date());
+  start.setDate(start.getDate() - p.back());
+  const list = tasks.filter(t => new Date(t.completedAt) >= start && isWork(t));
+  return {
+    lines: toLines(list),
+    period: p.text(),
+    heading: p.heading(),
+    count: list.length,
+    tasks: [...list].sort((a, b) => b.completedAt.localeCompare(a.completedAt)),
+  };
 }
 
 export async function askAi(kind, payload) {

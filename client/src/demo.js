@@ -76,7 +76,7 @@ export const demoBackend = {
   async ai(kind) {
     await new Promise(r => setTimeout(r, 900));
     return kind === 'standup'
-      ? '*Yesterday*\n• Shipped the onboarding flow to 10% of new users\n• Reviewed pull requests\n• Morning run, 5 km\n*Today*\n• Monitor onboarding metrics\n*Blockers*\n• None'
+      ? '*Yesterday*\n• Shipped the onboarding flow to 10% of new users\n• Reviewed pull requests\n• Fixed the flaky login test\n*Today*\n• Monitor onboarding metrics\n*Blockers*\n• None'
       : '## Highlights\n- **Shipped the onboarding flow** to 10% of new users ★\n- Wrote the **design doc for sync**\n- Fixed a flaky login test\n## Where your time went\n- **Work**: 6 tasks, mostly shipping and reviews\n- **Health**: 3 tasks, runs and yoga\n- **Learning**: 2 tasks, steady reading\n## Patterns\n- You logged something every day this week. That is a 7-day streak.\n## Next week\n- Keep the morning runs going and block time to finish chapter 5.';
   },
 };

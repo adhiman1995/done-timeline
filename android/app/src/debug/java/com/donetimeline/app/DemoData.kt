@@ -37,7 +37,7 @@ object DemoData {
 
     /** Canned answers so the AI screens can be previewed offline. */
     fun ai(kind: AiKind): String? = when (kind) {
-        AiKind.STANDUP -> "*Yesterday*\n• Shipped the onboarding flow to 10% of new users\n• Reviewed pull requests\n• Morning run, 5 km\n*Today*\n• Monitor onboarding metrics\n*Blockers*\n• None"
+        AiKind.STANDUP -> "*Yesterday*\n• Shipped the onboarding flow to 10% of new users\n• Reviewed pull requests\n• Fixed the flaky login test\n*Today*\n• Monitor onboarding metrics\n*Blockers*\n• None"
         AiKind.WEEKLY -> "## Highlights\n- **Shipped the onboarding flow** to 10% of new users ★\n- Wrote the **design doc for sync**\n- Fixed a flaky login test\n## Where your time went\n- **Work**: 5 tasks, mostly shipping and reviews\n- **Health**: 2 tasks, runs and yoga\n## Patterns\n- You logged something on 6 of the last 7 days.\n## Next week\n- Keep the morning runs going and block time to finish chapter 5."
     }
 }

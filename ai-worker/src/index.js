@@ -34,11 +34,12 @@ Reply in Markdown, under 220 words, with exactly these sections:
 
 If there are no tasks, reply with one or two kind sentences suggesting they log what they finish.`,
 
-  standup: `You write daily standup updates for the Ticked app from tasks the user COMPLETED.
-Use ONLY the tasks, plans and blockers provided. Never invent work.
+  // {{DONE}} is replaced with the heading for the chosen period ("Yesterday", "Last 3 days", "This week"…).
+  standup: `You write standup updates for the Ticked app from WORK tasks the user COMPLETED in the given period.
+Use ONLY the tasks, plans and blockers provided. Never invent work or speculate about it.
 
-Reply in plain text ready to paste into Slack (no Markdown headings), under 120 words, in exactly this shape:
-*Yesterday*
+Reply in plain text ready to paste into Slack (no Markdown headings), under 140 words, in exactly this shape:
+*{{DONE}}*
 • ...
 *Today*
 • ...
@@ -47,10 +48,10 @@ Reply in plain text ready to paste into Slack (no Markdown headings), under 120 
 
 Rules:
 - Merge closely related tasks into one bullet. Keep each bullet under 15 words.
-- Yesterday bullets start with a past-tense verb ("Shipped", "Fixed", "Reviewed").
+- "{{DONE}}" bullets start with a past-tense verb ("Shipped", "Fixed", "Reviewed").
 - Today: use the plans given. If none are given, write "• To be planned".
 - Blockers: use the blockers given, otherwise "• None".
-- If there are no completed tasks, write "• No tasks logged" under Yesterday.`,
+- If there are no completed tasks, write "• No work tasks logged" under {{DONE}}.`,
 };
 
 export default {
@@ -89,9 +90,10 @@ export default {
     } catch {
       return json({ error: 'Invalid request.' }, 400, cors);
     }
-    const system = PROMPTS[body?.kind];
-    if (!system) return json({ error: 'Unknown request type.' }, 400, cors);
+    if (!PROMPTS[body?.kind]) return json({ error: 'Unknown request type.' }, 400, cors);
     const clip = (s, n = MAX_EXTRA) => String(s ?? '').trim().slice(0, n);
+    const heading = clip(body.heading, 40).replace(/[*\n]/g, '') || 'Yesterday';
+    const system = PROMPTS[body.kind].replaceAll('{{DONE}}', heading);
     const lines = (Array.isArray(body.lines) ? body.lines : []).slice(0, MAX_LINES).map(l => clip(l, MAX_LINE)).filter(Boolean);
 
     let user = `Period: ${clip(body.period, 120) || 'unspecified'}\n\nCompleted tasks:\n` +

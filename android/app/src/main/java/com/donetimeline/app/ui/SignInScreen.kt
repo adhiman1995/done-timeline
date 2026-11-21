@@ -268,7 +268,7 @@ private fun TimelinePreview(entered: Boolean) {
 
 /** White status/navigation bar icons while this screen is showing (it sits on brand blue). */
 @Composable
-private fun LightSystemBarIcons() {
+fun LightSystemBarIcons() {
     val view = LocalView.current
     val dark = Done.colors.isDark
     DisposableEffect(view, dark) {

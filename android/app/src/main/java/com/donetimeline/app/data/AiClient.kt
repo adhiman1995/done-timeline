@@ -18,8 +18,51 @@ import java.util.Locale
 
 enum class AiKind(val key: String) { WEEKLY("weekly"), STANDUP("standup") }
 
-/** What gets sent to the AI: one line per task, plus a description of the period. */
-data class AiInput(val lines: List<String>, val period: String, val count: Int)
+/** What gets sent to the AI: one line per task, a description of the period and (standup) the "done" heading. */
+data class AiInput(
+    val lines: List<String>,
+    val period: String,
+    val count: Int,
+    val heading: String = "",
+    /** The tasks behind [lines], newest first (shown as a preview). */
+    val tasks: List<Task> = emptyList(),
+)
+
+/** Time window for a standup. Standups only use tasks tagged "Work". */
+enum class StandupPeriod(val label: String) {
+    SINCE_LAST_WORKDAY("Since yesterday"),
+    TODAY("Today"),
+    LAST_3_DAYS("Last 3 days"),
+    THIS_WEEK("This week");
+
+    /** Chip label; on Mondays "Since yesterday" really means since Friday. */
+    fun chipLabel(today: LocalDate = LocalDate.now()) =
+        if (this == SINCE_LAST_WORKDAY && today.dayOfWeek in setOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY)) "Since Friday" else label
+
+    fun start(today: LocalDate = LocalDate.now()): LocalDate = when (this) {
+        SINCE_LAST_WORKDAY -> today.minusDays(when (today.dayOfWeek) { DayOfWeek.MONDAY -> 3L; DayOfWeek.SUNDAY -> 2L; else -> 1L })
+        TODAY -> today
+        LAST_3_DAYS -> today.minusDays(2)
+        THIS_WEEK -> today.with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    }
+
+    /** Heading for the "done" section of the standup. */
+    fun heading(today: LocalDate = LocalDate.now()) = when (this) {
+        SINCE_LAST_WORKDAY -> if (chipLabel(today) == "Since Friday") "Since Friday" else "Yesterday"
+        TODAY -> "Done today"
+        LAST_3_DAYS -> "Last 3 days"
+        THIS_WEEK -> "This week"
+    }
+
+    fun description(today: LocalDate = LocalDate.now()) = when (this) {
+        SINCE_LAST_WORKDAY -> if (chipLabel(today) == "Since Friday") "since Friday" else "yesterday and today"
+        TODAY -> "today"
+        LAST_3_DAYS -> "the last 3 days"
+        THIS_WEEK -> "this week (since Monday)"
+    }
+}
+
+fun Task.isWork() = category.trim().equals("work", ignoreCase = true)
 
 /**
  * Calls the Ticked AI proxy (ai-worker/, a Cloudflare Worker that holds the Groq key).
@@ -35,6 +78,7 @@ class AiClient(private val auth: FirebaseAuth) {
             .put("lines", JSONArray(input.lines))
             .put("plan", plan)
             .put("blockers", blockers)
+            .put("heading", input.heading)
             .toString()
 
         return withContext(Dispatchers.IO) {
@@ -80,17 +124,21 @@ class AiClient(private val auth: FirebaseAuth) {
         fun weekly(tasks: List<Task>, zone: ZoneId = ZoneId.systemDefault()): AiInput {
             val start = LocalDate.now(zone).minusDays(6).atStartOfDay(zone).toInstant().toEpochMilli()
             val list = tasks.filter { it.completedAt >= start }
-            return AiInput(lines(list, zone), "the last 7 days", list.size)
+            return AiInput(lines(list, zone), "the last 7 days", list.size, tasks = list.sortedByDescending { it.completedAt })
         }
 
-        /** Since the previous working day (Friday when it's Monday), plus today so far. */
-        fun standup(tasks: List<Task>, zone: ZoneId = ZoneId.systemDefault()): AiInput {
+        /** Work-tagged tasks in the chosen [period]. */
+        fun standup(tasks: List<Task>, period: StandupPeriod, zone: ZoneId = ZoneId.systemDefault()): AiInput {
             val today = LocalDate.now(zone)
-            val back = when (today.dayOfWeek) { DayOfWeek.MONDAY -> 3L; DayOfWeek.SUNDAY -> 2L; else -> 1L }
-            val start = today.minusDays(back).atStartOfDay(zone).toInstant().toEpochMilli()
-            val list = tasks.filter { it.completedAt >= start }
-            val period = if (back == 1L) "yesterday and today so far" else "the last working day and today so far"
-            return AiInput(lines(list, zone), period, list.size)
+            val start = period.start(today).atStartOfDay(zone).toInstant().toEpochMilli()
+            val list = tasks.filter { it.completedAt >= start && it.isWork() }
+            return AiInput(
+                lines = lines(list, zone),
+                period = period.description(today),
+                count = list.size,
+                heading = period.heading(today),
+                tasks = list.sortedByDescending { it.completedAt },
+            )
         }
     }
 }

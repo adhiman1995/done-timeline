@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { askAi, standupInput, weeklyInput } from '../ai.js';
+import { askAi, standupInput, weeklyInput, STANDUP_PERIODS } from '../ai.js';
+import { timeOf, dayLabel } from '../dates.js';
 import { CloseIcon, CopyIcon, RefreshIcon, SparkleIcon } from './icons.jsx';
 
 /** Entry card in the insights column. */
@@ -43,12 +44,13 @@ export function AiModal({ kind: initialKind, tasks, onClose }) {
   const [kind, setKind] = useState(initialKind);
   const [plan, setPlan] = useState('');
   const [blockers, setBlockers] = useState('');
+  const [period, setPeriod] = useState('yesterday');
   const [result, setResult] = useState({ weekly: '', standup: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const input = kind === 'weekly' ? weeklyInput(tasks) : standupInput(tasks);
+  const input = kind === 'weekly' ? weeklyInput(tasks) : standupInput(tasks, period);
   const text = result[kind];
 
   async function generate() {
@@ -56,7 +58,9 @@ export function AiModal({ kind: initialKind, tasks, onClose }) {
     setError('');
     setCopied(false);
     try {
-      const out = await askAi(kind, kind === 'standup' ? { ...input, plan, blockers } : input);
+      const { tasks: _preview, ...payload } = input;
+      let out = await askAi(kind, kind === 'standup' ? { ...payload, plan, blockers } : payload);
+      if (import.meta.env.DEV && kind === 'standup') out = out.replace('*Yesterday*', `*${input.heading}*`);
       setResult(r => ({ ...r, [kind]: out }));
     } catch (e) {
       setError(e.message);
@@ -100,11 +104,34 @@ export function AiModal({ kind: initialKind, tasks, onClose }) {
         </div>
 
         <p className="ai-scope">
-          Based on {input.count} task{input.count === 1 ? '' : 's'} from {input.period}.
+          {kind === 'weekly'
+            ? `Based on ${input.count} task${input.count === 1 ? '' : 's'} from ${input.period}.`
+            : `${input.count} Work task${input.count === 1 ? '' : 's'} ${input.period}. Only tasks tagged Work are used.`}
         </p>
 
         {kind === 'standup' && !text && (
           <>
+            <div className="field">
+              <span>Time period</span>
+              <div className="period-chips" role="radiogroup" aria-label="Standup period">
+                {STANDUP_PERIODS.map(p => (
+                  <button key={p.key} type="button" role="radio" aria-checked={period === p.key}
+                    className={`fchip ${period === p.key ? 'active' : ''}`} onClick={() => setPeriod(p.key)}>
+                    {p.label()}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {input.count === 0 ? (
+              <div className="notice">No Work tasks {input.period}. Tag the things you finish at work with the <strong>Work</strong> category to include them.</div>
+            ) : (
+              <ul className="standup-preview">
+                {input.tasks.slice(0, 5).map(t => (
+                  <li key={t.id}><i /> <span>{t.title}</span> <time>{dayLabel(new Date(t.completedAt))}, {timeOf(t.completedAt)}</time></li>
+                ))}
+                {input.count > 5 && <li className="more">+{input.count - 5} more</li>}
+              </ul>
+            )}
             <label className="field">
               <span>Plans for today <em>optional</em></span>
               <textarea rows={2} value={plan} onChange={e => setPlan(e.target.value)} maxLength={1000}
@@ -138,11 +165,14 @@ export function AiModal({ kind: initialKind, tasks, onClose }) {
           {text && !busy && (
             <button className="btn ghost push" onClick={generate}><RefreshIcon width={16} height={16} /> Regenerate</button>
           )}
+          {kind === 'standup' && text && !busy && (
+            <button className="btn ghost" onClick={() => setResult(r => ({ ...r, standup: '' }))}>Edit</button>
+          )}
           {text && !busy && (
             <button className="btn primary" onClick={copy}><CopyIcon width={16} height={16} /> {copied ? 'Copied' : 'Copy'}</button>
           )}
           {kind === 'standup' && !text && !busy && (
-            <button className="btn primary" onClick={generate}><SparkleIcon width={16} height={16} /> Generate standup</button>
+            <button className="btn primary" onClick={generate} disabled={input.count === 0}><SparkleIcon width={16} height={16} /> Generate standup</button>
           )}
           {kind === 'weekly' && !text && !busy && error && (
             <button className="btn primary" onClick={generate}>Try again</button>

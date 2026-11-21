@@ -142,8 +142,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     // ---- Ticked AI ----
 
+    var standupPeriod by mutableStateOf(com.donetimeline.app.data.StandupPeriod.SINCE_LAST_WORKDAY)
+
     fun aiInput(kind: AiKind): AiInput = state.value.allTasks.let {
-        if (kind == AiKind.WEEKLY) AiClient.weekly(it) else AiClient.standup(it)
+        if (kind == AiKind.WEEKLY) AiClient.weekly(it) else AiClient.standup(it, standupPeriod)
     }
 
     // Kept here (not in the screen) so results and in-flight requests survive switching tabs.
@@ -176,7 +178,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     /** Returns the AI's text; throws [com.donetimeline.app.data.AiException] with a user-facing message. */
     private suspend fun askAi(kind: AiKind, plan: String = "", blockers: String = ""): String {
-        if (demo.value != null) DemoData.ai(kind)?.let { kotlinx.coroutines.delay(900); return it }
+        if (demo.value != null) DemoData.ai(kind)?.let { kotlinx.coroutines.delay(900); return it.replace("*Yesterday*", "*${aiInput(kind).heading}*") }
         return container.ai.ask(kind, aiInput(kind), plan, blockers)
     }
 
