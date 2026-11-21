@@ -7,7 +7,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -103,7 +102,6 @@ fun TimelineScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 120.dp),
                 ) {
                     item("head") { PageHeader(state) }
-                    item("week") { WeekCard(state, onOpen = { editor = EditorTarget(it) }) }
                     item("stats") { StatsRow(state.stats) }
                     item("range") {
                         Tabs(
@@ -252,73 +250,8 @@ private fun PageHeader(state: UiState) {
 }
 
 @Composable
-private fun WeekCard(state: UiState, onOpen: (Task) -> Unit) {
-    val c = Done.colors
-    val total = state.week.sumOf { it.count }
-    val active = state.week.count { it.count > 0 }
-    DoneCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("This week", color = c.text, fontSize = 16.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("$total task${if (total == 1) "" else "s"}", color = c.muted, fontSize = 13.sp)
-            }
-            Text("$active of 7 days active", color = c.text2, fontSize = 13.5.sp, modifier = Modifier.padding(top = 2.dp, bottom = 14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                state.week.forEachIndexed { i, d ->
-                    val today = i == state.week.lastIndex
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            Modifier
-                                .size(38.dp)
-                                .then(if (today) Modifier.border(2.dp, c.accentSoft, CircleShape).padding(3.dp) else Modifier)
-                                .clip(CircleShape)
-                                .background(if (d.count > 0) c.accent else c.hover),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                if (d.count > 0) "${d.count}" else "${d.date.dayOfMonth}",
-                                color = if (d.count > 0) Color.White else c.muted,
-                                fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                        Text(
-                            d.date.dayOfWeek.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.getDefault()),
-                            color = c.muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp),
-                        )
-                    }
-                }
-            }
-            state.latest?.let { latest ->
-                Row(
-                    Modifier
-                        .padding(top = 16.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .border(1.dp, c.border, RoundedCornerShape(14.dp))
-                        .clickable { onOpen(latest) }
-                        .padding(start = 12.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CategoryIcon(latest.category, 34.dp)
-                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                        Text("Latest: ${latest.title}", color = c.text, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            relativeTime(latest.completedAt) + if (latest.category.isNotBlank()) " · ${latest.category}" else "",
-                            color = c.muted, fontSize = 12.5.sp, maxLines = 1,
-                        )
-                    }
-                    Box(Modifier.size(30.dp).border(1.dp, c.borderStrong, CircleShape), contentAlignment = Alignment.Center) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = c.text2, modifier = Modifier.size(18.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun StatsRow(stats: Stats) {
-    Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         StatCard("All time", "${stats.total}", Modifier.weight(1f))
         StatCard("Streak", "${stats.streak}", Modifier.weight(1f), suffix = if (stats.streak == 1) "day" else "days", flame = stats.streak > 0)
         StatCard("Best day", "${stats.bestDay}", Modifier.weight(1f))

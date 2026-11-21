@@ -1,4 +1,6 @@
 <resources>
     <color name="window_bg">#F5F6F8</color>
     <color name="ic_launcher_bg">#3B7BF6</color>
+    <!-- Middle of the icon's #5B9BFF → #2E6BE6 gradient; the sign-in screen starts from it too. -->
+    <color name="brand_blue">#4483F3</color>
 </resources>

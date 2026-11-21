@@ -41,8 +41,6 @@ sealed interface Filter {
 
 data class Stats(val today: Int, val week: Int, val total: Int, val streak: Int, val bestDay: Int = 0, val starred: Int = 0)
 
-data class WeekDay(val date: LocalDate, val count: Int)
-
 data class DayGroup(val date: LocalDate, val tasks: List<Task>)
 
 data class Account(val name: String, val email: String)
@@ -56,9 +54,7 @@ data class UiState(
     val inScopeCount: Int = 0,
     val starredCount: Int = 0,
     val stats: Stats = Stats(0, 0, 0, 0),
-    val week: List<WeekDay> = emptyList(),
     val rangeCounts: Map<Range, Int> = emptyMap(),
-    val latest: Task? = null,
     val filter: Filter = Filter.All,
     val range: Range = Range.WEEK,
     val query: String = "",
@@ -205,9 +201,8 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 bestDay = perDay.values.maxOrNull() ?: 0,
                 starred = all.count { it.starred },
             ),
-            week = (6 downTo 0).map { val d = today.minusDays(it.toLong()); WeekDay(d, perDay[d] ?: 0) },
             rangeCounts = rangeCounts,
-            latest = all.maxByOrNull { it.completedAt },
+
             filter = c.filter,
             range = c.range,
             query = c.query,
