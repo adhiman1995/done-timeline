@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
                         BackHandler { showAccount = false }
                         AccountScreen(vm, onBack = { showAccount = false })
                     }
-                    else -> TimelineScreen(vm, onOpenSettings = { showAccount = true })
+                    else -> MainShell(vm, onOpenSettings = { showAccount = true })
                 }
             }
         }

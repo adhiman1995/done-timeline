@@ -1,6 +1,10 @@
 package com.donetimeline.app.ui
 
 import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
@@ -142,8 +146,36 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         if (kind == AiKind.WEEKLY) AiClient.weekly(it) else AiClient.standup(it)
     }
 
+    // Kept here (not in the screen) so results and in-flight requests survive switching tabs.
+    val aiResults = mutableStateMapOf<AiKind, String>()
+    val aiErrors = mutableStateMapOf<AiKind, String>()
+    val aiBusy = mutableStateMapOf<AiKind, Boolean>()
+    var standupPlan by mutableStateOf("")
+    var standupBlockers by mutableStateOf("")
+
+    fun generateAi(kind: AiKind) {
+        if (aiBusy[kind] == true) return
+        aiBusy[kind] = true
+        aiErrors.remove(kind)
+        viewModelScope.launch {
+            try {
+                aiResults[kind] = askAi(kind, standupPlan, standupBlockers)
+            } catch (e: Exception) {
+                aiErrors[kind] = e.message ?: "Ticked AI failed."
+            } finally {
+                aiBusy[kind] = false
+            }
+        }
+    }
+
+    /** Clears a result so the inputs show again (used for "New standup"). */
+    fun resetAi(kind: AiKind) {
+        aiResults.remove(kind)
+        aiErrors.remove(kind)
+    }
+
     /** Returns the AI's text; throws [com.donetimeline.app.data.AiException] with a user-facing message. */
-    suspend fun askAi(kind: AiKind, plan: String = "", blockers: String = ""): String {
+    private suspend fun askAi(kind: AiKind, plan: String = "", blockers: String = ""): String {
         if (demo.value != null) DemoData.ai(kind)?.let { kotlinx.coroutines.delay(900); return it }
         return container.ai.ask(kind, aiInput(kind), plan, blockers)
     }
