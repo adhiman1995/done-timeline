@@ -534,6 +534,9 @@ button.chip.active { background: hsl(var(--hue) 70% 52%); border-color: transpar
 .connect-intro { margin: 0; color: var(--text-2); font-size: 14.5px; }
 .google-btn { height: 48px; width: 100%; background: var(--card); border-color: var(--border); color: var(--text); border-radius: 999px; }
 .google-btn:hover:not(:disabled) { background: var(--hover); }
+.legal-link { justify-self: center; color: var(--muted); font-size: 13px; }
+.legal-link:hover { color: var(--text-2); }
+a.btn { text-decoration: none; }
 
 .account-who { display: flex; align-items: center; gap: 12px; }
 .account-who img, .account-who .avatar-fallback { width: 44px; height: 44px; border-radius: 50%; flex: none; object-fit: cover; }
@@ -541,6 +544,8 @@ button.chip.active { background: hsl(var(--hue) 70% 52%); border-color: transpar
 .account-name { font-weight: 600; }
 .account-email { color: var(--text-2); font-size: 13.5px; overflow-wrap: anywhere; }
 .account-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.danger-zone { margin: 0; line-height: 1.5; }
+.danger-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 
 /* =========================================================
    Responsive

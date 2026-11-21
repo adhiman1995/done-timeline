@@ -49,7 +49,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -75,6 +77,7 @@ private val BrandMid = Color(0xFF4483F3) // same as the launch splash (@color/br
 fun SignInScreen(vm: MainViewModel) {
     val context = LocalContext.current // the Activity: Credential Manager needs it to show the account picker
     val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
     var busy by rememberSaveable { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -171,7 +174,13 @@ fun SignInScreen(vm: MainViewModel) {
                     "Works offline · Syncs with the Ticked website",
                     color = Color.White.copy(alpha = 0.78f), fontSize = 13.sp,
                 )
-                Spacer(Modifier.height(18.dp))
+                Text(
+                    "Privacy Policy",
+                    color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable { uriHandler.openUri(PRIVACY_URL) }.padding(8.dp),
+                )
+                Spacer(Modifier.height(8.dp))
             }
         }
     }

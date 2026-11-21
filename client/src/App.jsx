@@ -57,7 +57,7 @@ export default function App() {
       e => {
         setLoading(false);
         if (e.code === 'permission-denied') {
-          setNotice(`${user.email} doesn't have access to this timeline. Sign in with the account it belongs to.`);
+          setNotice("Your tasks couldn't be loaded (permission denied). Please sign in again.");
           firebase.logOut();
         } else {
           setError(firebase.friendlyError(e));

@@ -1,8 +1,8 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, reauthenticateWithPopup, deleteUser } from 'firebase/auth';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, Timestamp,
+  collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, Timestamp, getDocsFromServer,
 } from 'firebase/firestore';
 
 // These values identify the Firebase project; they are public by design.
@@ -37,6 +37,30 @@ export async function signInWithGoogle() {
 }
 
 export const logOut = () => signOut(auth);
+
+/**
+ * Permanently deletes the signed-in account and all its tasks.
+ * Confirms with Google first (Firebase requires a recent sign-in to delete an account).
+ * Returns false if the user closed the Google window.
+ */
+export async function deleteAccount() {
+  const user = auth.currentUser;
+  if (!user) return false;
+  try {
+    await reauthenticateWithPopup(user, new GoogleAuthProvider());
+  } catch (e) {
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return false;
+    throw e;
+  }
+  const snap = await getDocsFromServer(tasksCol(user.uid));
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = writeBatch(db);
+    snap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
+  await deleteUser(user);
+  return true;
+}
 
 // ---- Tasks: users/{uid}/tasks/{taskId} ----
 
@@ -111,7 +135,8 @@ export async function importTasks(uid, list) {
 }
 
 export function friendlyError(e) {
-  if (e?.code === 'permission-denied') return "This Google account doesn't have access to these tasks.";
+  if (e?.code === 'permission-denied') return "That change wasn't allowed. Please check the task and try again.";
+  if (e?.code === 'auth/user-mismatch') return 'Please confirm with the same Google account you signed in with.';
   if (e?.code === 'unavailable') return "You're offline. Changes will sync when you're back online.";
   return e?.message || 'Something went wrong.';
 }

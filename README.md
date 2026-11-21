@@ -31,8 +31,8 @@ Live site: https://adhiman1995.github.io/done-timeline/
 - **Sign-in:** Google, through Firebase Authentication. Credential Manager on Android, a popup on the web.
 - **Storage:** each task is a Firestore document at `users/{uid}/tasks/{taskId}` with
   `title`, `notes`, `category`, `starred`, `completedAt`, `createdAt` and `updatedAt`.
-- **Security:** [firestore.rules](firestore.rules) only lets a signed-in user reach their own tasks, and only
-  for the allowed email address. The Firebase config in the web code is public by design.
+- **Security:** [firestore.rules](firestore.rules) lets anyone sign in, but each user can only reach their own
+  tasks, and writes are validated. The Firebase config in the web code is public by design.
 - **Android offline:** Firestore keeps a copy on the phone. Changes save instantly, work offline and
   upload automatically when the network returns. Edits from the website appear live while the app is open.
 - **Web:** listens for changes live and caches tasks in the browser, so repeat visits only download what changed.
@@ -46,7 +46,7 @@ npm run dev          # http://localhost:5173
 ```
 
 Preview the UI without signing in: http://localhost:5173/?demo (sample data, development only).
-On Android debug builds: `adb shell am start -n com.donetimeline.app/.ui.MainActivity --ez demo true`.
+On Android debug builds: `adb shell am start -n com.ticked.app/com.donetimeline.app.ui.MainActivity --ez demo true`.
 
 `localhost` is an authorized domain in Firebase by default, so sign-in works locally.
 
@@ -74,8 +74,18 @@ The phone or emulator also needs a Google account (an emulator image with Google
   [.github/workflows/deploy-web.yml](.github/workflows/deploy-web.yml).
 - **Security rules:** after editing `firestore.rules`, paste it into
   **Firebase console → Firestore Database → Rules → Publish**.
-- **Android release:** **Build → Generate Signed App Bundle / APK** in Android Studio. Add the release key's
-  SHA-1 (and Google Play's app-signing SHA-1, if you publish there) to Firebase first.
+- **Android release (Google Play):** package `com.ticked.app`. Release builds are signed with the upload key in
+  `android/release/` (git-ignored; keep a backup). Build the bundle with
+  `cd android && ./gradlew bundleRelease` → `app/build/outputs/bundle/release/app-release.aab`.
+  Store listing text, data-safety answers and graphics are in [android/store/](android/store/).
+  Firebase needs the SHA-1 of the debug key, the upload key **and** Play's app-signing key
+  (Play Console → Setup → App signing) for Google sign-in to work.
+
+## Privacy and account deletion
+
+[client/public/privacy.html](client/public/privacy.html) is published at
+https://adhiman1995.github.io/done-timeline/privacy.html. Users can delete their account and all tasks from the
+Android Account screen or the website's account menu.
 
 ## Backup and import
 

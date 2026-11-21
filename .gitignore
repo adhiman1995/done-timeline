@@ -15,3 +15,8 @@ android/.kotlin/
 
 # Local data export (personal data)
 tasks-export.json
+
+# Release signing (never commit)
+android/release/
+*.jks
+*.keystore

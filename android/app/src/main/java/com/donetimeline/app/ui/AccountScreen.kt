@@ -27,11 +27,21 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.launch
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -95,7 +105,62 @@ fun AccountScreen(vm: MainViewModel, onBack: () -> Unit) {
             ) {
                 Text("Sign out", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
             }
+
+            DeleteAccount(vm)
+
+            val uriHandler = LocalUriHandler.current
+            TextButton(onClick = { uriHandler.openUri(PRIVACY_URL) }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text("Privacy Policy", color = c.text2, fontSize = 13.5.sp)
+            }
         }
+    }
+}
+
+@Composable
+private fun DeleteAccount(vm: MainViewModel) {
+    val c = Done.colors
+    val context = LocalContext.current // the Activity: needed to confirm with Google
+    val scope = rememberCoroutineScope()
+    var confirming by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        TextButton(onClick = { error = null; confirming = true }, enabled = !busy) {
+            if (busy) {
+                CircularProgressIndicator(Modifier.size(16.dp), color = c.danger, strokeWidth = 2.dp)
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(if (busy) "Deleting account…" else "Delete account", color = c.danger, fontSize = 14.sp)
+        }
+        error?.let { Text(it, color = c.danger, fontSize = 13.sp, textAlign = TextAlign.Center) }
+    }
+
+    if (confirming) {
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            title = { Text("Delete your account?") },
+            text = {
+                Text(
+                    "This permanently deletes your Ticked account and all your tasks, on every device and on the website. " +
+                        "You'll be asked to confirm with Google. This can't be undone."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirming = false
+                    scope.launch {
+                        busy = true
+                        error = vm.deleteAccount(context)
+                        busy = false
+                    }
+                }) { Text("Delete", color = c.danger, fontWeight = FontWeight.SemiBold) }
+            },
+            dismissButton = { TextButton(onClick = { confirming = false }) { Text("Cancel") } },
+            containerColor = c.surface,
+            titleContentColor = c.text,
+            textContentColor = c.text2,
+        )
     }
 }
 

@@ -5,9 +5,11 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.MetadataChanges
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
 import java.util.Date
 
 /** What the phone currently knows about the user's tasks. */
@@ -69,6 +71,14 @@ class TaskRepository(
 
     fun delete(uid: String, id: String) {
         tasks(uid).document(id).delete().addOnFailureListener(onWriteError)
+    }
+
+    /** Deletes every task of [uid] on the server (used when deleting the account). Needs a connection. */
+    suspend fun deleteAll(uid: String) {
+        val docs = tasks(uid).get(Source.SERVER).await().documents
+        docs.chunked(400).forEach { chunk ->
+            firestore.batch().apply { chunk.forEach { delete(it.reference) } }.commit().await()
+        }
     }
 
     private fun fields(title: String, notes: String, category: String, completedAt: Long) = mapOf(

@@ -1,4 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+// Play upload key (android/release/, git-ignored). Without it, release builds are simply unsigned.
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("release/keystore.properties")
+    if (f.exists()) f.inputStream().use(::load)
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -12,15 +19,27 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.donetimeline.app"
+        applicationId = "com.ticked.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "2.0.0"
+        versionCode = 3
+        versionName = "2.1.0"
+    }
+
+    signingConfigs {
+        if (keystoreProps.isNotEmpty()) {
+            create("upload") {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
+            signingConfigs.findByName("upload")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

@@ -11,6 +11,7 @@ import androidx.credentials.exceptions.NoCredentialException
 import com.donetimeline.app.R
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -33,7 +34,30 @@ class AuthRepository(private val auth: FirebaseAuth) {
      * Shows Google's account picker and signs in to Firebase.
      * [activityContext] must be an Activity. Returns an error message, or null on success or cancel.
      */
-    suspend fun signIn(activityContext: Context): String? {
+    suspend fun signIn(activityContext: Context): String? = withGoogle(activityContext) { credential ->
+        auth.signInWithCredential(credential).await()
+    }
+
+    /**
+     * Confirms with Google (fresh sign-in, as Firebase requires for deletion), then deletes the
+     * user's data via [deleteData] and finally the account itself. Returns an error message, or null.
+     */
+    suspend fun deleteAccount(activityContext: Context, deleteData: suspend (uid: String) -> Unit): String? {
+        val user = auth.currentUser ?: return null
+        var confirmed = false
+        val error = withGoogle(activityContext) { credential ->
+            user.reauthenticate(credential).await()
+            confirmed = true
+            deleteData(user.uid)
+            user.delete().await()
+        }
+        if (error == null && !confirmed) return "Account deletion was cancelled."
+        if (error == null) runCatching { CredentialManager.create(activityContext).clearCredentialState(ClearCredentialStateRequest()) }
+        return error
+    }
+
+    /** Shows Google's account picker, then runs [block] with a Firebase credential. Returns an error message, or null. */
+    private suspend fun withGoogle(activityContext: Context, block: suspend (AuthCredential) -> Unit): String? {
         val option = GetSignInWithGoogleOption.Builder(activityContext.getString(R.string.default_web_client_id)).build()
         val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
         return try {
@@ -42,7 +66,7 @@ class AuthRepository(private val auth: FirebaseAuth) {
                 return "Google sign-in returned an unexpected response."
             }
             val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
-            auth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await()
+            block(GoogleAuthProvider.getCredential(idToken, null))
             null
         } catch (e: GetCredentialCancellationException) {
             null

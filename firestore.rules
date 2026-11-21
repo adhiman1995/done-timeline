@@ -1,13 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each user can only reach their own tasks, and only the allowed account can sign in.
+    // Anyone can sign in with Google; each person can only read and write their own tasks.
     // Paste this into Firebase console → Firestore Database → Rules → Publish.
     match /users/{uid}/tasks/{taskId} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == uid
-        && request.auth.token.email_verified == true
-        && request.auth.token.email == "alokdhiman018@gmail.com";
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidTask(request.resource.data);
+    }
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Same limits as the apps: title ≤ 200, notes ≤ 2000, category ≤ 40 characters.
+    function isValidTask(d) {
+      return d.keys().hasOnly(['title', 'notes', 'category', 'starred', 'completedAt', 'createdAt', 'updatedAt'])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+        && (!('notes' in d) || (d.notes is string && d.notes.size() <= 2000))
+        && (!('category' in d) || (d.category is string && d.category.size() <= 40))
+        && (!('starred' in d) || d.starred is bool)
+        && d.completedAt is timestamp
+        && (!('createdAt' in d) || d.createdAt is timestamp)
+        && (!('updatedAt' in d) || d.updatedAt is timestamp);
     }
   }
 }

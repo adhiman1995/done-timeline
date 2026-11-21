@@ -48,6 +48,7 @@ export default function SignIn({ notice }) {
           <GoogleIcon />
           {busy ? 'Signing in…' : 'Continue with Google'}
         </button>
+        <a className="legal-link" href="./privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
       </div>
     </div>
   );

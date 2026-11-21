@@ -333,6 +333,9 @@ fun fieldColors() = Done.colors.let { c ->
     )
 }
 
+/** Public privacy policy (also linked from the Play Store listing). */
+const val PRIVACY_URL = "https://adhiman1995.github.io/done-timeline/privacy.html"
+
 /** "just now", "5 minutes ago", "Yesterday"… */
 fun relativeTime(epochMillis: Long): String {
     val now = System.currentTimeMillis()

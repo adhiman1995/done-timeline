@@ -136,6 +136,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun signOut(context: Context) = viewModelScope.launch { auth.signOut(context) }
 
+    /** Permanently deletes the account and all its tasks. Returns an error message, or null. */
+    suspend fun deleteAccount(activityContext: Context): String? =
+        auth.deleteAccount(activityContext) { uid -> repo.deleteAll(uid) }
+
     private suspend fun onListenError(e: Throwable) {
         if (e is FirebaseFirestoreException && e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
             val email = auth.currentUser?.email.orEmpty()
