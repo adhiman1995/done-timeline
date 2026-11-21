@@ -3,7 +3,7 @@ import { idToken } from './firebase.js';
 import { DEMO, demoBackend } from './demo.js';
 import { daysAgo, startOfDay } from './dates.js';
 
-const AI_URL = import.meta.env.VITE_AI_URL || 'https://ticked-ai.adhiman1995.workers.dev';
+const AI_URL = import.meta.env.VITE_AI_URL || 'https://ticked-ai.ticked-ai.workers.dev';
 
 const fmt = iso =>
   new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });

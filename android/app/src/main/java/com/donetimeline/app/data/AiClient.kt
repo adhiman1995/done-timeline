@@ -63,7 +63,7 @@ class AiClient(private val auth: FirebaseAuth) {
 
     companion object {
         /** Deployed Worker URL (see ai-worker/). */
-        const val AI_URL = "https://ticked-ai.adhiman1995.workers.dev"
+        const val AI_URL = "https://ticked-ai.ticked-ai.workers.dev"
 
         private val lineFormat = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)
 
