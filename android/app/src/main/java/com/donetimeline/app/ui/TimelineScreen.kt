@@ -57,6 +57,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -93,13 +97,13 @@ fun TimelineScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
     Scaffold(
         containerColor = c.bg,
         topBar = { TopBar(state, vm, onOpenSettings) },
-        snackbarHost = { SnackbarHost(snackbar, Modifier.padding(bottom = 72.dp)) },
+        snackbarHost = { SnackbarHost(snackbar, Modifier.padding(bottom = 80.dp)) },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
             Box(Modifier.fillMaxSize()) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 120.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 100.dp),
                 ) {
                     item("head") { PageHeader(state) }
                     item("stats") { StatsRow(state.stats) }
@@ -134,27 +138,14 @@ fun TimelineScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
                 }
             }
 
-            // Bottom dock with the primary action.
-            Box(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, c.bg.copy(alpha = 0.95f), c.bg)))
+            // Primary action: compact round add button, bottom right.
+            AddButton(
+                onClick = { editor = EditorTarget(null) },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
                     .navigationBarsPadding()
-                    .padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 16.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                GradientButton(
-                    text = "Add completed task",
-                    onClick = { editor = EditorTarget(null) },
-                    height = 52.dp,
-                    modifier = Modifier.fillMaxWidth(),
-                    leading = {
-                        Icon(Icons.Filled.Add, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(8.dp))
-                    },
-                )
-            }
+                    .padding(end = 20.dp, bottom = 20.dp),
+            )
         }
     }
 
@@ -169,6 +160,24 @@ fun TimelineScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
             },
             onDelete = target.task?.let { t -> { vm.delete(t.id); editor = null } },
         )
+    }
+}
+
+/** Round gradient "+" button for adding a completed task. */
+@Composable
+private fun AddButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = Done.colors
+    Box(
+        modifier
+            .size(58.dp)
+            .shadow(14.dp, CircleShape, ambientColor = Color(0xFF2E6BE6), spotColor = Color(0xFF2E6BE6))
+            .clip(CircleShape)
+            .background(c.gradient)
+            .clickable(onClickLabel = "Add completed task", role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = "Add completed task" },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
     }
 }
 

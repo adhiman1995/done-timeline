@@ -235,12 +235,9 @@ export default function App() {
 
       <aside className="aside">{insights}</aside>
 
-      <div className="dock">
-        <button className="fab" onClick={() => setModal({})}>
-          <PlusIcon />
-          Add completed task
-        </button>
-      </div>
+      <button className="fab" onClick={() => setModal({})} aria-label="Add completed task" title="Add completed task">
+        <PlusIcon width={26} height={26} strokeWidth={2.4} />
+      </button>
 
       {modal && (
         <TaskModal
