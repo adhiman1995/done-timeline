@@ -5,7 +5,7 @@ compatibility_date = "2025-09-01"
 
 [vars]
 FIREBASE_PROJECT_ID = "timeline-project-9286d"
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = "openai/gpt-oss-120b"
 ALLOWED_ORIGINS = "https://adhiman1995.github.io,http://localhost:5173"
 
 # 10 AI requests per user per minute.

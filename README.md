@@ -85,7 +85,7 @@ The phone or emulator also needs a Google account (an emulator image with Google
 
 AI features run through a small Cloudflare Worker in [ai-worker/](ai-worker/) so the **Groq API key never ships in
 the apps**. The apps send the user's Firebase ID token plus the task lines; the Worker verifies the token, rate-limits
-each user (10 requests per minute) and calls Groq (`GROQ_MODEL` in `wrangler.toml`).
+each user (10 requests per minute) and calls Groq (`GROQ_MODEL` in `wrangler.toml`, currently `openai/gpt-oss-120b`).
 
 ```bash
 cd ai-worker

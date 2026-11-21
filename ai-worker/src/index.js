@@ -20,7 +20,7 @@ const MAX_EXTRA = 1000;
 const PROMPTS = {
   weekly: `You are the weekly review assistant inside Ticked, an app where people log tasks they have COMPLETED.
 Write a short, warm and specific review of the user's week using ONLY the tasks provided.
-Never invent tasks, numbers, people or details. Each task line is "Day date time · title [category] ★ — notes" (★ = starred, important to the user).
+Never invent tasks, numbers, people or details, and don't speculate about why a task matters or what it is for. Each task line is "Day date time · title [category] ★ — notes" (★ = starred, important to the user).
 
 Reply in Markdown, under 220 words, with exactly these sections:
 ## Highlights
@@ -109,8 +109,11 @@ export default {
         headers: { Authorization: `Bearer ${env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: env.GROQ_MODEL,
-          temperature: 0.4,
-          max_tokens: 900,
+          temperature: 0.3,
+          max_tokens: 2000,
+          // gpt-oss models think before answering; keep that short and out of the reply.
+          reasoning_effort: 'low',
+          include_reasoning: false,
           messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
         }),
       });
