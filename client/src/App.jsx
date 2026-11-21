@@ -10,6 +10,8 @@ import Toolbar from './components/Toolbar.jsx';
 import Insights from './components/Insights.jsx';
 import TaskViews from './components/Timeline.jsx';
 import TaskModal from './components/TaskModal.jsx';
+import GoalsCard, { GoalModal } from './components/Goals.jsx';
+import { AiCard, AiModal } from './components/Ai.jsx';
 import { STARRED } from './components/filters.js';
 import { PlusIcon, SearchIcon, CloseIcon } from './components/icons.jsx';
 import { RANGES, inRange, streak } from './dates.js';
@@ -42,6 +44,9 @@ export default function App() {
   const [user, setUser] = useState(DEMO ? demoUser : undefined); // undefined while Firebase restores the session
   const [notice, setNotice] = useState('');
   const [accountOpen, setAccountOpen] = useState(false);
+  const [goals, setGoals] = useState([]);
+  const [goalModal, setGoalModal] = useState(null); // null | { goal?: Goal }
+  const [aiKind, setAiKind] = useState(null); // null | 'weekly' | 'standup'
   const searchRef = useRef(null);
 
   useEffect(() => (DEMO ? undefined : onAuthStateChanged(firebase.auth, u => setUser(u))), []);
@@ -64,6 +69,12 @@ export default function App() {
         }
       },
     );
+  }, [user]);
+
+  useEffect(() => {
+    setGoals([]);
+    if (!user) return;
+    return backend.watchGoals(user.uid, setGoals, e => setError(firebase.friendlyError(e)));
   }, [user]);
 
   // Ctrl/⌘ K focuses search.
@@ -138,18 +149,27 @@ export default function App() {
     `${now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} · ` +
     `${visible.length} task${visible.length === 1 ? '' : 's'}, ${RANGE_TEXT[range]}`;
   const filterLabel = filter === STARRED ? 'Starred' : filter;
+  function saveGoal(goal) {
+    write(goalModal?.goal ? backend.updateGoal(user.uid, goalModal.goal.id, goal) : backend.createGoal(user.uid, goal));
+    setGoalModal(null);
+  }
+
   const insights = (
+    <>
+    <AiCard onOpen={setAiKind} />
+    <GoalsCard goals={goals} tasks={tasks} onAdd={() => setGoalModal({})} onEdit={goal => setGoalModal({ goal })} />
     <Insights
       tasks={tasks}
       onOpenTask={task => setModal({ task })}
       onFilter={c => { setFilter(c); setRange('all'); }}
       onExport={openAccount}
     />
+    </>
   );
 
   return (
     <div className="app">
-      <Rail user={user} theme={theme} onToggleTheme={toggleTheme} onAdd={() => setModal({})} onAccount={openAccount} />
+      <Rail user={user} theme={theme} onToggleTheme={toggleTheme} onAdd={() => setModal({})} onAi={() => setAiKind('weekly')} onAccount={openAccount} />
       <Sidebar
         tasks={tasks}
         categories={categories}
@@ -248,6 +268,18 @@ export default function App() {
           onClose={() => setModal(null)}
         />
       )}
+
+      {goalModal && (
+        <GoalModal
+          goal={goalModal.goal}
+          categories={categories}
+          onSave={saveGoal}
+          onDelete={goal => { write(backend.deleteGoal(user.uid, goal.id)); setGoalModal(null); }}
+          onClose={() => setGoalModal(null)}
+        />
+      )}
+
+      {aiKind && <AiModal kind={aiKind} tasks={tasks} onClose={() => setAiKind(null)} />}
 
       {accountOpen && <AccountMenu user={user} tasks={tasks} onClose={() => setAccountOpen(false)} />}
     </div>

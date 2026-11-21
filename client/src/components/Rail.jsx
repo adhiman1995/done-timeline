@@ -1,7 +1,7 @@
-import { Logo, PlusIcon, SunIcon, MoonIcon, TimelineIcon } from './icons.jsx';
+import { Logo, PlusIcon, SunIcon, MoonIcon, TimelineIcon, SparkleIcon } from './icons.jsx';
 
 /** Slim icon rail on desktop; becomes the top bar on phones. */
-export default function Rail({ user, theme, onToggleTheme, onAdd, onAccount }) {
+export default function Rail({ user, theme, onToggleTheme, onAdd, onAi, onAccount }) {
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
   return (
     <nav className="rail" aria-label="App">
@@ -16,6 +16,9 @@ export default function Rail({ user, theme, onToggleTheme, onAdd, onAccount }) {
         </button>
         <button className="rail-btn" onClick={onAdd} aria-label="Add completed task" title="Add completed task">
           <PlusIcon />
+        </button>
+        <button className="rail-btn" onClick={onAi} aria-label="Ticked AI" title="Ticked AI: weekly review and standup">
+          <SparkleIcon />
         </button>
       </div>
 

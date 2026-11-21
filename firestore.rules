@@ -8,6 +8,20 @@ service cloud.firestore {
       allow create, update: if isOwner(uid) && isValidTask(request.resource.data);
     }
 
+    // Goals: { category ('' = any task), target 1–100, period day|week|month }.
+    match /users/{uid}/goals/{goalId} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidGoal(request.resource.data);
+    }
+
+    function isValidGoal(d) {
+      return d.keys().hasOnly(['category', 'target', 'period', 'createdAt'])
+        && d.category is string && d.category.size() <= 40
+        && d.target is int && d.target >= 1 && d.target <= 100
+        && d.period in ['day', 'week', 'month']
+        && (!('createdAt' in d) || d.createdAt is timestamp);
+    }
+
     function isOwner(uid) {
       return request.auth != null && request.auth.uid == uid;
     }

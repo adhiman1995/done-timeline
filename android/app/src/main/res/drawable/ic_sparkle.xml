@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ticked AI sparkle (same shape as the web SparkleIcon). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,3l1.8,4.7L18.5,9.5l-4.7,1.8L12,16l-1.8,-4.7L5.5,9.5l4.7,-1.8z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M19,15l0.8,2.2L22,18l-2.2,0.8L19,21l-0.8,-2.2L16,18l2.2,-0.8z" />
+</vector>

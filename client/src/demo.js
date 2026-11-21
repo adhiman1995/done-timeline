@@ -34,6 +34,14 @@ const makeTasks = () => SAMPLE.map(([days, hour, title, category, notes, starred
 });
 let tasks = null;
 
+let goals = [
+  { id: 'g1', category: 'Health', target: 4, period: 'week' },
+  { id: 'g2', category: '', target: 3, period: 'day' },
+  { id: 'g3', category: 'Learning', target: 8, period: 'month' },
+];
+const goalListeners = new Set();
+const emitGoals = () => goalListeners.forEach(fn => fn([...goals]));
+
 const listeners = new Set();
 const emit = () => listeners.forEach(fn => fn([...tasks]));
 
@@ -55,5 +63,20 @@ export const demoBackend = {
   async deleteTask(_uid, id) {
     tasks = tasks.filter(t => t.id !== id);
     emit();
+  },
+  watchGoals(_uid, onData) {
+    goalListeners.add(onData);
+    onData([...goals]);
+    return () => goalListeners.delete(onData);
+  },
+  async createGoal(_uid, g) { goals = [...goals, { id: `g${Date.now()}`, ...g }]; emitGoals(); },
+  async updateGoal(_uid, id, g) { goals = goals.map(x => (x.id === id ? { ...x, ...g } : x)); emitGoals(); },
+  async deleteGoal(_uid, id) { goals = goals.filter(x => x.id !== id); emitGoals(); },
+  // Canned AI answers so the UI can be previewed offline.
+  async ai(kind) {
+    await new Promise(r => setTimeout(r, 900));
+    return kind === 'standup'
+      ? '*Yesterday*\n• Shipped the onboarding flow to 10% of new users\n• Reviewed pull requests\n• Morning run, 5 km\n*Today*\n• Monitor onboarding metrics\n*Blockers*\n• None'
+      : '## Highlights\n- **Shipped the onboarding flow** to 10% of new users ★\n- Wrote the **design doc for sync**\n- Fixed a flaky login test\n## Where your time went\n- **Work**: 6 tasks, mostly shipping and reviews\n- **Health**: 3 tasks, runs and yoga\n- **Learning**: 2 tasks, steady reading\n## Patterns\n- You logged something every day this week. That is a 7-day streak.\n## Next week\n- Keep the morning runs going and block time to finish chapter 5.';
   },
 };

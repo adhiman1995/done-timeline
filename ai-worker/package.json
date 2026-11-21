@@ -1,0 +1,17 @@
+{
+  "name": "ticked-ai",
+  "version": "1.0.0",
+  "description": "Ticked AI proxy (Cloudflare Worker) for Groq",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "jose": "^6.2.18"
+  },
+  "devDependencies": {
+    "wrangler": "^4.166.0"
+  },
+  "private": true,
+  "type": "module"
+}

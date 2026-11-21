@@ -72,6 +72,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.donetimeline.app.data.Task
+import androidx.compose.ui.res.painterResource
+import com.donetimeline.app.data.Goal
+import com.donetimeline.app.data.AiKind
+import com.donetimeline.app.R
 import com.donetimeline.app.ui.theme.Done
 import com.donetimeline.app.ui.theme.categoryColors
 import java.time.Instant
@@ -90,13 +94,15 @@ fun TimelineScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var editor by remember { mutableStateOf<EditorTarget?>(null) }
+    var goalEditor by remember { mutableStateOf<GoalTarget?>(null) }
+    var aiKind by remember { mutableStateOf<AiKind?>(null) }
     val c = Done.colors
 
     LaunchedEffect(Unit) { vm.messageFlow.collect { snackbar.showSnackbar(it) } }
 
     Scaffold(
         containerColor = c.bg,
-        topBar = { TopBar(state, vm, onOpenSettings) },
+        topBar = { TopBar(state, vm, onOpenSettings, onOpenAi = { aiKind = AiKind.WEEKLY }) },
         snackbarHost = { SnackbarHost(snackbar, Modifier.padding(bottom = 80.dp)) },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
@@ -107,6 +113,10 @@ fun TimelineScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
                 ) {
                     item("head") { PageHeader(state) }
                     item("stats") { StatsRow(state.stats) }
+                    item("ai") { AiCard(onOpen = { aiKind = it }) }
+                    item("goals") {
+                        GoalsSection(state.goals, onAdd = { goalEditor = GoalTarget(null) }, onEdit = { goalEditor = GoalTarget(it) })
+                    }
                     item("range") {
                         Tabs(
                             options = Range.entries, selected = state.range, label = { it.label },
@@ -149,6 +159,18 @@ fun TimelineScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
         }
     }
 
+    goalEditor?.let { target ->
+        GoalSheet(
+            goal = target.goal,
+            categories = state.categories,
+            onSave = { category, goalTarget, period -> vm.saveGoal(target.goal?.id, category, goalTarget, period); goalEditor = null },
+            onDelete = target.goal?.let { g -> { vm.deleteGoal(g.id); goalEditor = null } },
+            onDismiss = { goalEditor = null },
+        )
+    }
+
+    aiKind?.let { kind -> AiSheet(vm, kind, onDismiss = { aiKind = null }) }
+
     editor?.let { target ->
         TaskEditorSheet(
             task = target.task,
@@ -181,12 +203,14 @@ private fun AddButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
+private data class GoalTarget(val goal: Goal?)
+
 private data class EditorTarget(val task: Task?)
 
 /* ---------------------------------------------------------------- Top bar */
 
 @Composable
-private fun TopBar(state: UiState, vm: MainViewModel, onOpenSettings: () -> Unit) {
+private fun TopBar(state: UiState, vm: MainViewModel, onOpenSettings: () -> Unit, onOpenAi: () -> Unit) {
     val c = Done.colors
     var searching by rememberSaveable { mutableStateOf(false) }
 
@@ -218,6 +242,7 @@ private fun TopBar(state: UiState, vm: MainViewModel, onOpenSettings: () -> Unit
                         Text("Ticked", color = c.text, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         SyncStatus(state)
                     }
+                    IconButton(onClick = onOpenAi) { Icon(painterResource(R.drawable.ic_sparkle), "Ticked AI", tint = c.accentText, modifier = Modifier.size(22.dp)) }
                     IconButton(onClick = { searching = true }) { Icon(Icons.Filled.Search, "Search", tint = c.text2) }
                     IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.AccountCircle, "Account", tint = c.text2) }
                 }

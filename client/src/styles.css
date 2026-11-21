@@ -558,7 +558,6 @@ a.btn { text-decoration: none; }
   .sidebar { display: none; }
   .chips-row { display: flex; }
   .insights-inline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .insights-inline .icard:last-child { grid-column: span 2; }
 }
 
 @media (max-width: 720px) {
@@ -580,8 +579,7 @@ a.btn { text-decoration: none; }
   .search kbd { display: none; }
 
   .insights-inline { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .insights-inline .icard:last-child { grid-column: auto; }
-  .insights-inline .icard:nth-child(2):not(:last-child) { display: none; }
+  .insights-inline .icard.cats { display: none; }
 
   .toolbar { border-radius: 18px; }
   .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; width: 100%; }
@@ -610,3 +608,64 @@ a.btn { text-decoration: none; }
   .account-actions { grid-template-columns: 1fr; }
   .fab { right: calc(18px + env(safe-area-inset-right)); bottom: calc(20px + env(safe-area-inset-bottom)); }
 }
+
+/* =========================================================
+   Goals
+   ========================================================= */
+.goal-list { list-style: none; margin: 10px -8px 12px; padding: 0; display: grid; gap: 2px; }
+.goal-list button {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  padding: 6px 8px; border-radius: 12px; transition: background 0.15s;
+}
+.goal-list button:hover { background: var(--hover); }
+.ring { flex: none; }
+.ring circle { fill: none; stroke-width: 5; }
+.ring-track { stroke: var(--hover); }
+.ring-fill { stroke: hsl(var(--hue) 72% 56%); stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
+.ring-fill.met { stroke: #22a06b; }
+.ring-check { color: #22a06b; }
+.goal-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.goal-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goal-sub { font-size: 12.5px; color: var(--muted); }
+.goals-empty { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 14px; color: var(--muted); }
+.goals-empty p { margin: 0; color: var(--text-2); font-size: 13.5px; }
+.goals-empty svg { flex: none; margin-top: 2px; }
+.stepper { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 12px; background: var(--field); overflow: hidden; }
+.stepper button { width: 42px; height: 44px; font-size: 20px; color: var(--text-2); }
+.stepper button:hover { background: var(--hover); color: var(--text); }
+.field .stepper input { border: 0; border-radius: 0; background: transparent; text-align: center; padding: 0; height: 44px; box-shadow: none; -moz-appearance: textfield; }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.period-tabs { background: var(--panel); border-radius: 999px; padding: 4px; }
+.period-tabs .tab { flex: 1; justify-content: center; height: 36px; padding: 0 10px; }
+.goal-preview { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); font-weight: 600; font-size: 14px; }
+
+/* =========================================================
+   Ticked AI
+   ========================================================= */
+.icard-head h2 { display: flex; align-items: center; gap: 7px; }
+.ai-card { background: linear-gradient(135deg, var(--accent-soft), var(--card) 70%); }
+.ai-card h2 svg { color: var(--accent-text); }
+.ai-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ai-modal { width: min(600px, 100%); }
+.ai-modal .modal-head h2 { display: flex; align-items: center; gap: 8px; }
+.ai-modal .modal-head h2 svg { color: var(--accent-text); }
+.ai-modal .tabs { background: var(--panel); border-radius: 999px; padding: 4px; align-self: start; }
+.ai-scope { margin: -4px 0 0; color: var(--muted); font-size: 13px; }
+.ai-loading { display: flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 14px; padding: 18px 0; }
+.ai-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: ai-pulse 1s ease-in-out infinite; }
+.ai-dot:nth-child(2) { animation-delay: 0.15s; }
+.ai-dot:nth-child(3) { animation-delay: 0.3s; margin-right: 6px; }
+@keyframes ai-pulse { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: none; } }
+.rich { background: var(--field); border: 1px solid var(--border-soft); border-radius: 16px; padding: 14px 18px; font-size: 14.5px; line-height: 1.6; }
+.rich h3 { font-size: 14px; margin: 12px 0 4px; color: var(--text); }
+.rich h3:first-child { margin-top: 0; }
+.rich p { margin: 0 0 8px; color: var(--text-2); }
+.rich ul { margin: 0 0 6px; padding-left: 20px; color: var(--text-2); }
+.rich strong { color: var(--text); }
+.standup strong { display: block; margin-top: 6px; }
+.standup strong:first-child { margin-top: 0; }
+.standup {
+  margin: 0; white-space: pre-wrap; font: inherit; font-size: 14.5px; line-height: 1.6; color: var(--text);
+  background: var(--field); border: 1px solid var(--border-soft); border-radius: 16px; padding: 14px 18px;
+}
+.ai-note { margin: -6px 0 0; font-size: 12px; color: var(--muted); }

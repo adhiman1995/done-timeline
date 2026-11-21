@@ -44,3 +44,7 @@ export const FilterIcon = p => (<svg {...base} {...p}><path d="M4 6h16M7 12h10M1
 export const LayersIcon = p => (<svg {...base} {...p}><path d="M12 3l9 5-9 5-9-5 9-5z" /><path d="M3 13l9 5 9-5" /></svg>);
 export const TimelineIcon = p => (<svg {...base} {...p}><circle cx="6" cy="6" r="2" /><circle cx="6" cy="18" r="2" /><path d="M6 8v8M11 6h9M11 18h9M11 12h6" /></svg>);
 export const DownloadIcon = p => (<svg {...base} {...p}><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>);
+export const SparkleIcon = p => (<svg {...base} {...p}><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>);
+export const TargetIcon = p => (<svg {...base} {...p}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="0.5" fill="currentColor" /></svg>);
+export const CopyIcon = p => (<svg {...base} {...p}><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 012-2h9" /></svg>);
+export const RefreshIcon = p => (<svg {...base} {...p}><path d="M20 12a8 8 0 11-2.3-5.7M20 4v5h-5" /></svg>);

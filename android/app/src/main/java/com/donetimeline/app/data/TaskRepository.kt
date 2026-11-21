@@ -73,9 +73,42 @@ class TaskRepository(
         tasks(uid).document(id).delete().addOnFailureListener(onWriteError)
     }
 
-    /** Deletes every task of [uid] on the server (used when deleting the account). Needs a connection. */
+    // ---- Goals ----
+
+    private fun goals(uid: String) = firestore.collection("users").document(uid).collection("goals")
+
+    fun observeGoals(uid: String): Flow<List<Goal>> = callbackFlow {
+        val registration = goals(uid).addSnapshotListener { snap, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snap != null) trySend(snap.documents.map(::toGoal))
+        }
+        awaitClose { registration.remove() }
+    }
+
+    fun saveGoal(uid: String, id: String?, category: String, target: Int, period: GoalPeriod) {
+        val data = mapOf("category" to category.trim().take(40), "target" to target.coerceIn(1, 100), "period" to period.key)
+        val write = if (id == null) goals(uid).document().set(data + ("createdAt" to FieldValue.serverTimestamp()))
+        else goals(uid).document(id).update(data)
+        write.addOnFailureListener(onWriteError)
+    }
+
+    fun deleteGoal(uid: String, id: String) {
+        goals(uid).document(id).delete().addOnFailureListener(onWriteError)
+    }
+
+    private fun toGoal(doc: DocumentSnapshot) = Goal(
+        id = doc.id,
+        category = doc.getString("category").orEmpty(),
+        target = (doc.getLong("target") ?: 1L).toInt().coerceIn(1, 100),
+        period = GoalPeriod.of(doc.getString("period")),
+    )
+
+    /** Deletes every task and goal of [uid] on the server (used when deleting the account). Needs a connection. */
     suspend fun deleteAll(uid: String) {
-        val docs = tasks(uid).get(Source.SERVER).await().documents
+        val docs = tasks(uid).get(Source.SERVER).await().documents + goals(uid).get(Source.SERVER).await().documents
         docs.chunked(400).forEach { chunk ->
             firestore.batch().apply { chunk.forEach { delete(it.reference) } }.commit().await()
         }

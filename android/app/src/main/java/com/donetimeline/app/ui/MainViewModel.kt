@@ -6,7 +6,15 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.donetimeline.app.AppContainer
+import com.donetimeline.app.DemoData
+import com.donetimeline.app.data.AiClient
+import com.donetimeline.app.data.AiInput
+import com.donetimeline.app.data.AiKind
+import com.donetimeline.app.data.Goal
+import com.donetimeline.app.data.GoalPeriod
+import com.donetimeline.app.data.GoalProgress
 import com.donetimeline.app.data.Task
+import com.donetimeline.app.data.progress
 import com.donetimeline.app.data.TaskSnapshot
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -63,12 +71,15 @@ data class UiState(
     val pendingWrites: Boolean = false,
     /** Showing the on-device copy only (usually offline). */
     val offline: Boolean = false,
+    val goals: List<GoalProgress> = emptyList(),
+    /** Every task (unfiltered), used for AI summaries. */
+    val allTasks: List<Task> = emptyList(),
 )
 
 private data class Controls(val filter: Filter, val range: Range, val query: String)
 
 /** Signed-in user plus their tasks; snapshot is null while the first load is running. */
-private data class Session(val user: Account?, val snapshot: TaskSnapshot?)
+private data class Session(val user: Account?, val snapshot: TaskSnapshot?, val goals: List<Goal> = emptyList())
 
 private fun FirebaseUser.toAccount() = Account(displayName.orEmpty(), email.orEmpty())
 
@@ -88,17 +99,54 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         .onStart { emit(auth.currentUser) }
         .flatMapLatest { user ->
             if (user == null) flowOf(Session(null, null))
-            else repo.observe(user.uid)
-                .map { Session(user.toAccount(), it) }
+            else combine(
+                repo.observe(user.uid),
+                repo.observeGoals(user.uid).onStart { emit(emptyList()) }.catch { emit(emptyList()) },
+            ) { snapshot, goals -> Session(user.toAccount(), snapshot, goals) }
                 .onStart { emit(Session(user.toAccount(), null)) }
                 .catch { e -> onListenError(e) }
         }
 
-    private val session = combine(demo, firebaseSession) { d, s ->
-        if (d != null) Session(Account("Demo", "demo@example.com"), TaskSnapshot(d, pendingWrites = false, fromCache = false)) else s
+    private val demoGoals = MutableStateFlow<List<Goal>>(emptyList())
+
+    private val session = combine(demo, demoGoals, firebaseSession) { d, g, s ->
+        if (d != null) Session(Account("Demo", "demo@example.com"), TaskSnapshot(d, pendingWrites = false, fromCache = false), g) else s
     }
 
-    fun startDemo(tasks: List<Task>) { demo.value = tasks }
+    fun startDemo(tasks: List<Task>) {
+        demo.value = tasks
+        demoGoals.value = DemoData.goals().orEmpty()
+    }
+
+    // ---- Goals ----
+
+    fun saveGoal(id: String?, category: String, target: Int, period: GoalPeriod) {
+        if (demo.value != null) {
+            val goal = Goal(id ?: "g${System.nanoTime()}", category.trim(), target, period)
+            demoGoals.value = if (id == null) demoGoals.value + goal else demoGoals.value.map { if (it.id == id) goal else it }
+            return
+        }
+        val uid = uid ?: return
+        repo.saveGoal(uid, id, category, target, period)
+    }
+
+    fun deleteGoal(id: String) {
+        if (demo.value != null) { demoGoals.value = demoGoals.value.filterNot { it.id == id }; return }
+        val uid = uid ?: return
+        repo.deleteGoal(uid, id)
+    }
+
+    // ---- Ticked AI ----
+
+    fun aiInput(kind: AiKind): AiInput = state.value.allTasks.let {
+        if (kind == AiKind.WEEKLY) AiClient.weekly(it) else AiClient.standup(it)
+    }
+
+    /** Returns the AI's text; throws [com.donetimeline.app.data.AiException] with a user-facing message. */
+    suspend fun askAi(kind: AiKind, plan: String = "", blockers: String = ""): String {
+        if (demo.value != null) DemoData.ai(kind)?.let { kotlinx.coroutines.delay(900); return it }
+        return container.ai.ask(kind, aiInput(kind), plan, blockers)
+    }
 
     val state: StateFlow<UiState> = combine(session, controls) { s, c -> buildState(s, c) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), buildState(Session(auth.currentUser?.toAccount(), null), controls.value))
@@ -212,6 +260,8 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             query = c.query,
             account = session.user,
             pendingWrites = session.snapshot?.pendingWrites == true,
+            goals = session.goals.map { it.progress(all, zone) },
+            allTasks = all,
             offline = session.snapshot?.fromCache == true,
         )
     }

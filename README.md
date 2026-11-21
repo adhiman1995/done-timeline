@@ -81,6 +81,27 @@ The phone or emulator also needs a Google account (an emulator image with Google
   Firebase needs the SHA-1 of the debug key, the upload key **and** Play's app-signing key
   (Play Console → Setup → App signing) for Google sign-in to work.
 
+## Ticked AI (weekly review and standup)
+
+AI features run through a small Cloudflare Worker in [ai-worker/](ai-worker/) so the **Groq API key never ships in
+the apps**. The apps send the user's Firebase ID token plus the task lines; the Worker verifies the token, rate-limits
+each user (10 requests per minute) and calls Groq (`GROQ_MODEL` in `wrangler.toml`).
+
+```bash
+cd ai-worker
+npm install
+npx wrangler login                  # once, opens the browser
+npx wrangler deploy                 # prints https://ticked-ai.<subdomain>.workers.dev
+npx wrangler secret put GROQ_API_KEY
+```
+
+The Worker URL is set in `client/src/ai.js` (`AI_URL`) and `android/.../data/AiClient.kt` (`AI_URL`).
+
+## Goals
+
+Goals live at `users/{uid}/goals/{id}` as `{ category ('' = any task), target, period: day | week | month }`.
+Progress is the number of tasks in the current day, week (from Monday) or month whose category matches.
+
 ## Privacy and account deletion
 
 [client/public/privacy.html](client/public/privacy.html) is published at

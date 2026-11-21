@@ -84,7 +84,7 @@ export default function Insights({ tasks, onOpenTask, onFilter, onExport }) {
       </section>
 
       {data.categories.length > 0 && (
-        <section className="icard">
+        <section className="icard cats">
           <div className="icard-head"><h2>Top categories</h2></div>
           <ul className="cat-list">
             {data.categories.map(c => (

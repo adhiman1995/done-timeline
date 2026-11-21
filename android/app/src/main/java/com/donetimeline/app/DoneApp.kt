@@ -2,6 +2,7 @@ package com.donetimeline.app
 
 import android.app.Application
 import android.content.Context
+import com.donetimeline.app.data.AiClient
 import com.donetimeline.app.data.AuthRepository
 import com.donetimeline.app.data.TaskRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -25,5 +26,6 @@ class AppContainer(val appContext: Context) {
 
     // Firestore keeps an offline copy on the device by default.
     val auth = AuthRepository(FirebaseAuth.getInstance())
+    val ai = AiClient(FirebaseAuth.getInstance())
     val repository = TaskRepository(FirebaseFirestore.getInstance()) { writeErrors.tryEmit(it) }
 }

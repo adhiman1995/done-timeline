@@ -52,10 +52,13 @@ export async function deleteAccount() {
     if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return false;
     throw e;
   }
-  const snap = await getDocsFromServer(tasksCol(user.uid));
-  for (let i = 0; i < snap.docs.length; i += 400) {
+  const docs = [
+    ...(await getDocsFromServer(tasksCol(user.uid))).docs,
+    ...(await getDocsFromServer(goalsCol(user.uid))).docs,
+  ];
+  for (let i = 0; i < docs.length; i += 400) {
     const batch = writeBatch(db);
-    snap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+    docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
     await batch.commit();
   }
   await deleteUser(user);
@@ -133,6 +136,26 @@ export async function importTasks(uid, list) {
   }
   return valid.length;
 }
+
+// ---- Goals: users/{uid}/goals/{goalId} = { category ('' = any task), target, period, createdAt } ----
+
+const goalsCol = uid => collection(db, 'users', uid, 'goals');
+
+const cleanGoal = g => ({
+  category: String(g.category ?? '').trim().slice(0, 40),
+  target: Math.min(100, Math.max(1, Math.round(Number(g.target) || 1))),
+  period: ['day', 'week', 'month'].includes(g.period) ? g.period : 'week',
+});
+
+export function watchGoals(uid, onData, onError) {
+  return onSnapshot(goalsCol(uid), snap => onData(snap.docs.map(d => ({ id: d.id, ...cleanGoal(d.data()) }))), onError);
+}
+export const createGoal = (uid, goal) => setDoc(doc(goalsCol(uid)), { ...cleanGoal(goal), createdAt: serverTimestamp() });
+export const updateGoal = (uid, id, goal) => updateDoc(doc(goalsCol(uid), id), cleanGoal(goal));
+export const deleteGoal = (uid, id) => deleteDoc(doc(goalsCol(uid), id));
+
+/** Firebase ID token for the AI proxy. */
+export const idToken = () => auth.currentUser?.getIdToken();
 
 export function friendlyError(e) {
   if (e?.code === 'permission-denied') return "That change wasn't allowed. Please check the task and try again.";
